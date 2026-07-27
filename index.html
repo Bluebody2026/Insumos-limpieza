@@ -1,0 +1,1585 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Insumos de Limpieza</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#F0F4F8;min-height:100vh;}
+:root{
+  --pri:#2563EB;--pri-dark:#1E40AF;--pri-light:#EFF6FF;--pri-mid:#3B82F6;
+  --green:#16A34A;--green-l:#DCFCE7;
+  --red:#DC2626;--red-l:#FEE2E2;
+  --amber:#D97706;--amber-l:#FEF3C7;
+  --gray:#6B7280;--gray-l:#F9FAFB;--gray-bg:#F0F4F8;
+  --border:#E5E7EB;--text:#111827;--text-m:#6B7280;
+  --sidebar:250px;
+}
+/* Loading */
+#ls{position:fixed;inset:0;background:var(--pri-dark);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;gap:16px;transition:opacity .4s;}
+#ls p{color:rgba(255,255,255,.85);font-size:15px;font-weight:500;}
+.spin{width:32px;height:32px;border:3px solid rgba(255,255,255,.2);border-top-color:#FCD34D;border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* Modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:none;align-items:center;justify-content:center;padding:16px;}
+.modal.open{display:flex;animation:fadeIn .2s ease;}
+.modal-box{background:white;border-radius:16px;padding:28px 24px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.2);}
+.modal-title{font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.modal-sub{font-size:13px;color:var(--text-m);margin-bottom:20px;}
+.modal-err{font-size:13px;color:var(--red);min-height:18px;margin-bottom:8px;}
+.modal-btns{display:flex;gap:10px;margin-top:16px;}
+.modal-btn{flex:1;padding:11px;border-radius:9px;border:none;cursor:pointer;font-size:14px;font-weight:700;}
+.modal-btn-ok{background:var(--pri);color:white;}
+.modal-btn-cancel{background:var(--gray-l);color:var(--text);border:1px solid var(--border);}
+
+/* Layout */
+.app{display:flex;min-height:100vh;}
+.sidebar{width:var(--sidebar);background:#1E293B;display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;}
+.sidebar-logo{padding:20px 16px;border-bottom:1px solid rgba(255,255,255,.08);}
+.logo-title{color:white;font-size:15px;font-weight:700;line-height:1.3;}
+.logo-sub{color:rgba(255,255,255,.4);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-top:3px;}
+.nav-section{padding:10px 12px 4px;font-size:10px;font-weight:700;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:.1em;}
+.nav-btn{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;border-radius:8px;margin:2px 8px;color:rgba(255,255,255,.65);font-size:13px;font-weight:500;transition:all .15s;border:none;background:none;width:calc(100% - 16px);text-align:left;}
+.nav-btn:hover{background:rgba(255,255,255,.07);color:white;}
+.nav-btn.active{background:var(--pri);color:white;}
+.nav-icon{font-size:16px;width:20px;text-align:center;}
+.sidebar-bottom{margin-top:auto;padding:14px;border-top:1px solid rgba(255,255,255,.08);}
+.sync-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#EF4444;margin-right:7px;}
+.sync-lbl{color:rgba(255,255,255,.5);font-size:12px;}
+
+/* Main */
+.main{margin-left:var(--sidebar);flex:1;display:flex;flex-direction:column;}
+.topbar{background:white;border-bottom:1px solid var(--border);padding:0 24px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.topbar-title{font-size:15px;font-weight:700;color:var(--text);}
+.topbar-actions{display:flex;gap:8px;align-items:center;}
+.btn-excel{display:flex;align-items:center;gap:6px;padding:7px 14px;background:var(--green);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;}
+.btn-excel:hover{opacity:.88;}
+.page{padding:22px;flex:1;}
+.section{display:none;}
+.section.active{display:block;animation:fadeIn .2s ease;}
+
+/* Cards */
+.card{background:white;border-radius:14px;border:1px solid var(--border);overflow:hidden;margin-bottom:18px;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+.card-head{padding:13px 18px;border-bottom:1px solid var(--border);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.card-body{padding:20px;}
+
+/* Metrics */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+.metric{background:white;border-radius:12px;padding:16px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,.05);}
+.metric-icon{font-size:20px;margin-bottom:6px;}
+.metric-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-m);margin-bottom:3px;}
+.metric-val{font-size:28px;font-weight:700;}
+.metric-sub{font-size:11px;color:var(--text-m);margin-top:2px;}
+
+/* Alerts */
+.alert-banner{background:var(--red-l);border:1px solid #FCA5A5;border-radius:10px;padding:12px 16px;margin-bottom:18px;display:none;}
+.alert-banner.show{display:block;}
+.alert-title{font-size:14px;font-weight:700;color:var(--red);margin-bottom:6px;}
+.alert-item{font-size:13px;color:#7F1D1D;padding:3px 0;}
+
+/* Category cards */
+.cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;}
+.cat-card{background:white;border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+.cat-head{padding:11px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);}
+.cat-dot{width:9px;height:9px;border-radius:50%;}
+.cat-name{font-weight:700;font-size:13px;flex:1;}
+.cat-count{font-size:11px;color:var(--text-m);background:var(--gray-l);padding:2px 8px;border-radius:20px;}
+.art-row{padding:9px 14px;border-bottom:1px solid #F9FAFB;display:flex;align-items:center;gap:8px;}
+.art-row:last-child{border-bottom:none;}
+.art-name{flex:1;font-size:13px;font-weight:500;}
+.art-unit{font-size:11px;color:var(--text-m);background:var(--gray-l);padding:1px 6px;border-radius:4px;margin-right:4px;}
+.art-bar-bg{width:70px;height:4px;background:#F3F4F6;border-radius:2px;}
+.art-bar-fill{height:4px;border-radius:2px;transition:width .4s;}
+.art-nums{font-size:11px;text-align:right;min-width:70px;}
+.low-badge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--red-l);color:var(--red);margin-left:4px;}
+
+/* Form */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+.form-full{grid-column:1/-1;}
+.form-group label{font-size:12px;font-weight:700;color:var(--text-m);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em;}
+input,select,textarea{font-family:inherit;font-size:14px;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;width:100%;outline:none;background:white;color:var(--text);transition:border .15s,box-shadow .15s;}
+input:focus,select:focus,textarea:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+.btn-primary{width:100%;padding:12px;border-radius:10px;border:none;cursor:pointer;font-size:15px;font-weight:700;transition:opacity .15s;}
+.btn-primary:hover{opacity:.88;}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;}
+.btn-blue{background:var(--pri);color:white;}
+.btn-red{background:var(--red);color:white;}
+.btn-green{background:var(--green);color:white;}
+.btn-amber{background:var(--amber);color:white;}
+.band{padding:13px 18px;display:flex;align-items:center;gap:10px;border-bottom:2px solid;}
+.band-icon{font-size:22px;}
+.band-title{font-weight:700;font-size:15px;}
+.band-sub{font-size:12px;color:var(--text-m);}
+.band-red{background:var(--red-l);border-color:var(--red);}
+.band-green{background:var(--green-l);border-color:var(--green);}
+.band-amber{background:var(--amber-l);border-color:var(--amber);}
+.band-blue{background:var(--pri-light);border-color:var(--pri);}
+.band-purple{background:#EDE9FE;border-color:#7C3AED;}
+
+/* Log */
+.log-row{padding:11px 16px;border-bottom:1px solid #F9FAFB;display:flex;align-items:center;gap:10px;}
+.log-row:last-child{border-bottom:none;}
+.badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;}
+.badge-salida{background:var(--red-l);color:var(--red);}
+.badge-entrada{background:var(--green-l);color:var(--green);}
+.badge-compra{background:var(--pri-light);color:var(--pri);}
+.badge-traslado{background:#EDE9FE;color:#6D28D9;}
+.badge-traslado_recibido{background:#CCFBF1;color:#0F766E;}
+.badge-devolucion_recibida{background:#FFEDD5;color:#9A3412;}
+.badge-devolucion_central{background:#FFEDD5;color:#9A3412;}
+.log-main{flex:1;}
+.log-name{font-size:13px;font-weight:600;}
+.log-sub{font-size:11px;color:var(--text-m);margin-top:2px;}
+.search-bar{position:relative;margin-bottom:12px;}
+.search-bar input{padding-left:36px;}
+.search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-m);}
+
+/* Sub-tabs */
+.subtabs{display:flex;gap:4px;background:#F3F4F6;padding:4px;border-radius:10px;margin-bottom:16px;}
+.subtab{flex:1;padding:7px;border:none;background:none;border-radius:7px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-m);transition:all .15s;}
+.subtab.active{background:white;color:var(--pri);box-shadow:0 1px 3px rgba(0,0,0,.1);}
+
+/* Articulos */
+.art-item{padding:11px 14px;border-bottom:1px solid #F9FAFB;display:flex;align-items:center;gap:8px;}
+.art-item:last-child{border-bottom:none;}
+.art-item-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.art-item-info{flex:1;}
+.art-item-name{font-size:13px;font-weight:500;}
+.art-item-meta{font-size:11px;color:var(--text-m);margin-top:2px;}
+.btn-sm{padding:4px 10px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:600;}
+.btn-edit{background:var(--amber-l);color:#92400E;border:1px solid #FCD34D;}
+.btn-del{background:var(--red-l);color:var(--red);border:1px solid #FCA5A5;}
+.btn-save-sm{background:var(--pri);color:white;}
+.btn-cancel-sm{background:var(--gray-l);color:var(--text);border:1px solid var(--border);}
+.add-form{background:var(--pri-light);border:2px solid var(--pri);border-radius:12px;padding:16px;margin-bottom:16px;}
+.add-form-title{font-weight:700;font-size:13px;color:var(--pri);margin-bottom:12px;}
+.add-row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;}
+.add-row .form-group{flex:1;min-width:120px;}
+.color-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;}
+.color-opt{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;}
+.color-opt.selected{border-color:var(--text);transform:scale(1.2);}
+
+/* Admin */
+.admin-banner{background:linear-gradient(135deg,#1E293B,#1E40AF);border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.admin-badge{background:#FCD34D;color:#1E293B;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;}
+.admin-title{color:white;font-size:13px;font-weight:600;margin-top:4px;}
+.admin-actions{display:flex;gap:6px;flex-wrap:wrap;}
+.btn-change-pw{background:rgba(255,255,255,.12);color:white;border:1px solid rgba(255,255,255,.25);padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;}
+.btn-logout{background:rgba(220,38,38,.3);color:#FCA5A5;border:1px solid rgba(220,38,38,.4);padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;}
+.lock-box{text-align:center;padding:3rem 2rem;}
+.lock-icon{font-size:48px;margin-bottom:14px;}
+.lock-title{font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.lock-sub{font-size:13px;color:var(--text-m);margin-bottom:20px;}
+.btn-unlock{display:inline-flex;align-items:center;gap:8px;padding:11px 24px;background:var(--pri);color:white;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;}
+
+/* Consumo chart */
+.consumo-bar{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #F9FAFB;}
+.consumo-bar:last-child{border-bottom:none;}
+.consumo-name{width:160px;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.consumo-track{flex:1;background:#F3F4F6;border-radius:3px;height:8px;}
+.consumo-fill{height:8px;border-radius:3px;background:var(--pri);transition:width .4s;}
+.consumo-val{width:50px;text-align:right;font-size:12px;font-weight:600;color:var(--text-m);}
+
+/* Toast */
+#toast{position:fixed;bottom:22px;right:22px;z-index:9999;padding:11px 18px;border-radius:11px;font-size:14px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.14);display:none;animation:fadeIn .2s ease;max-width:300px;}
+.toast-ok{background:var(--green-l);color:var(--green);border:1px solid #86EFAC;}
+.toast-err{background:var(--red-l);color:var(--red);border:1px solid #FCA5A5;}
+
+/* Mobile */
+.mobile-header{display:none;background:#1E293B;padding:11px 16px;align-items:center;gap:10px;position:sticky;top:0;z-index:100;}
+.mobile-title{color:white;font-size:14px;font-weight:700;flex:1;}
+.hamburger{background:none;border:none;color:white;font-size:22px;cursor:pointer;}
+.mob-nav{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.5);}
+.mob-nav.open{display:block;}
+.mob-panel{background:#1E293B;width:260px;height:100%;padding:16px 0;overflow-y:auto;position:relative;z-index:1;}
+
+.empty{text-align:center;padding:2.5rem;color:var(--text-m);font-size:13px;}
+
+@media(max-width:768px){
+  .sidebar{display:none;}.main{margin-left:0;}.topbar{display:none;}.page{padding:14px;}
+  .mobile-header{display:flex;}.metrics{grid-template-columns:1fr 1fr;}
+  .cat-grid{grid-template-columns:1fr;}.form-grid{grid-template-columns:1fr;}
+  .add-row{flex-direction:column;}.add-row .form-group{width:100%;min-width:unset;}
+  #toast{bottom:14px;right:14px;left:14px;max-width:100%;}
+  .metric-val{font-size:22px;}
+}
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="ls"><div class="spin"></div><p>Conectando con la base de datos...</p></div>
+<div id="toast"></div>
+
+<!-- Modal PIN -->
+<div class="modal" id="modal-pin">
+  <div class="modal-box">
+    <div style="font-size:36px;text-align:center;margin-bottom:10px;">🔐</div>
+    <div class="modal-title" style="text-align:center;">Área de Administrador</div>
+    <div class="modal-sub" style="text-align:center;">Ingresa la contraseña para acceder a la configuración</div>
+    <input type="password" id="pin-input" placeholder="Contraseña" style="text-align:center;letter-spacing:.1em;font-size:16px;" onkeydown="if(event.key==='Enter')checkPin()">
+    <div class="modal-err" id="pin-err"></div>
+    <div class="modal-btns">
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal('modal-pin')">Cancelar</button>
+      <button class="modal-btn modal-btn-ok" onclick="checkPin()">Entrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Cambiar Contraseña -->
+<div class="modal" id="modal-pw">
+  <div class="modal-box">
+    <div style="font-size:36px;text-align:center;margin-bottom:10px;">🔑</div>
+    <div class="modal-title" style="text-align:center;">Cambiar contraseña</div>
+    <div class="modal-sub" style="text-align:center;">La nueva contraseña se guarda en Firebase</div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:10px;">
+      <div><label style="font-size:12px;font-weight:700;color:var(--text-m);text-transform:uppercase;display:block;margin-bottom:4px;">Contraseña actual</label><input type="password" id="pw-actual" placeholder="Contraseña actual"></div>
+      <div><label style="font-size:12px;font-weight:700;color:var(--text-m);text-transform:uppercase;display:block;margin-bottom:4px;">Nueva contraseña</label><input type="password" id="pw-nueva" placeholder="Nueva contraseña"></div>
+      <div><label style="font-size:12px;font-weight:700;color:var(--text-m);text-transform:uppercase;display:block;margin-bottom:4px;">Confirmar contraseña</label><input type="password" id="pw-confirm" placeholder="Repetir nueva contraseña" onkeydown="if(event.key==='Enter')changePassword()"></div>
+    </div>
+    <div class="modal-err" id="pw-err"></div>
+    <div class="modal-btns">
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal('modal-pw')">Cancelar</button>
+      <button class="modal-btn modal-btn-ok" onclick="changePassword()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Agregar Área -->
+<div class="modal" id="modal-area">
+  <div class="modal-box">
+    <div class="modal-title">Nueva área</div>
+    <div class="modal-sub">Agrega un área de destino para los insumos</div>
+    <input type="text" id="area-nombre" placeholder="Ej: Baños planta baja" style="margin-bottom:10px;">
+    <div class="modal-err" id="area-err"></div>
+    <div class="modal-btns">
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal('modal-area')">Cancelar</button>
+      <button class="modal-btn modal-btn-ok" onclick="agregarArea()">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Agregar Motivo -->
+<div class="modal" id="modal-motivo">
+  <div class="modal-box">
+    <div class="modal-title">Nuevo motivo de retiro</div>
+    <div class="modal-sub">Agrega un motivo para el registro de salidas</div>
+    <input type="text" id="motivo-nombre" placeholder="Ej: Desinfección profunda" style="margin-bottom:10px;">
+    <div class="modal-err" id="motivo-err"></div>
+    <div class="modal-btns">
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal('modal-motivo')">Cancelar</button>
+      <button class="modal-btn modal-btn-ok" onclick="agregarMotivo()">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile nav -->
+<div class="mob-nav" id="mobNav" onclick="if(event.target===this)closeMobNav()">
+  <div class="mob-panel">
+    <div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:6px;">
+      <div style="color:white;font-size:14px;font-weight:700;">🧹 Control de Insumos</div>
+      <div style="color:rgba(255,255,255,.5);font-size:11px;font-weight:600;margin-top:2px;" id="logo-sub-m">San Felipe (Base)</div>
+    </div>
+    <button class="nav-btn" onclick="showTab('dashboard');closeMobNav()"><span class="nav-icon">📊</span>Resumen</button>
+    <button class="nav-btn" onclick="showTab('salida');closeMobNav()"><span class="nav-icon">↑</span>Salida</button>
+    <button class="nav-btn" onclick="showTab('entrada');closeMobNav()"><span class="nav-icon">↓</span>Entrada</button>
+    <button class="nav-btn" onclick="showTab('compra');closeMobNav()"><span class="nav-icon">📦</span>Compra / Ingreso</button>
+    <button class="nav-btn" onclick="showTab('traslado');closeMobNav()"><span class="nav-icon">🚚</span>Transferencia de salida</button>
+    <button class="nav-btn" onclick="showTab('historial');closeMobNav()"><span class="nav-icon">📋</span>Historial</button>
+    <button class="nav-btn" onclick="showTab('consumo');closeMobNav()"><span class="nav-icon">📈</span>Consumo</button>
+    <button class="nav-btn" onclick="showTab('bodegas');closeMobNav()"><span class="nav-icon">🏢</span>Ver bodegas</button>
+    <button class="nav-btn" onclick="showTab('config');closeMobNav()"><span class="nav-icon">⚙️</span>Configuración</button>
+    <div style="padding:14px;border-top:1px solid rgba(255,255,255,.08);margin-top:auto;">
+      <span class="sync-dot" id="sd-m"></span><span class="sync-lbl" id="sl-m">Conectando...</span>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-title">🧹 Control de Insumos</div>
+      <div class="logo-sub" id="logo-sub">San Felipe (Base)</div>
+    </div>
+    <div style="padding:8px 0;flex:1;overflow-y:auto;">
+      <div class="nav-section">Principal</div>
+      <button class="nav-btn active" id="nav-dashboard" onclick="showTab('dashboard')"><span class="nav-icon">📊</span>Resumen</button>
+      <div class="nav-section">Operaciones</div>
+      <button class="nav-btn" id="nav-salida"   onclick="showTab('salida')">  <span class="nav-icon">↑</span>Salida</button>
+      <button class="nav-btn" id="nav-entrada"  onclick="showTab('entrada')"> <span class="nav-icon">↓</span>Entrada</button>
+      <button class="nav-btn" id="nav-compra"   onclick="showTab('compra')">  <span class="nav-icon">📦</span>Compra / Ingreso</button>
+      <button class="nav-btn" id="nav-traslado" onclick="showTab('traslado')"><span class="nav-icon">🚚</span>Transferencia de salida</button>
+      <button class="nav-btn" id="nav-historial" onclick="showTab('historial')"><span class="nav-icon">📋</span>Historial</button>
+      <div class="nav-section">Análisis</div>
+      <button class="nav-btn" id="nav-consumo"  onclick="showTab('consumo')"> <span class="nav-icon">📈</span>Consumo mensual</button>
+      <button class="nav-btn" id="nav-bodegas"  onclick="showTab('bodegas')"> <span class="nav-icon">🏢</span>Ver bodegas</button>
+      <div class="nav-section">Configuración</div>
+      <button class="nav-btn" id="nav-config"   onclick="showTab('config')">  <span class="nav-icon">⚙️</span>Configuración</button>
+    </div>
+    <div class="sidebar-bottom">
+      <span class="sync-dot" id="sd"></span><span class="sync-lbl" id="sl">Conectando...</span>
+    </div>
+  </aside>
+
+  <div class="main">
+    <!-- Mobile header -->
+    <div class="mobile-header">
+      <span style="font-size:20px;">🧹</span>
+      <span class="mobile-title" id="mob-title">Resumen</span>
+      <button class="btn-excel" onclick="exportarExcel()" style="padding:6px 10px;font-size:12px;">⬇ Excel</button>
+      <button class="hamburger" onclick="document.getElementById('mobNav').classList.add('open')">☰</button>
+    </div>
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="topbar-title" id="page-title">📊 Resumen del inventario</div>
+      <div class="topbar-actions">
+        <button class="btn-excel" onclick="exportarExcel()">⬇ Exportar Excel</button>
+      </div>
+    </div>
+
+    <div class="page">
+
+      <!-- DASHBOARD -->
+      <div id="tab-dashboard" class="section active">
+        <div id="alert-stock" class="alert-banner">
+          <div class="alert-title">⚠️ Insumos con stock bajo</div>
+          <div id="alert-items"></div>
+        </div>
+        <div class="metrics">
+          <div class="metric"><div class="metric-icon">🧴</div><div class="metric-lbl">Total insumos</div><div class="metric-val" id="m-total" style="color:var(--pri)">—</div><div class="metric-sub">unidades registradas</div></div>
+          <div class="metric"><div class="metric-icon">✅</div><div class="metric-lbl">Disponibles</div><div class="metric-val" id="m-disp" style="color:var(--green)">—</div><div class="metric-sub">en bodega</div></div>
+          <div class="metric"><div class="metric-icon">🔄</div><div class="metric-lbl">En uso</div><div class="metric-val" id="m-uso" style="color:var(--amber)">—</div><div class="metric-sub">retirados</div></div>
+          <div class="metric"><div class="metric-icon">⚠️</div><div class="metric-lbl">Stock bajo</div><div class="metric-val" id="m-low" style="color:var(--red)">—</div><div class="metric-sub">requieren reposición</div></div>
+        </div>
+        <div id="cat-grid" class="cat-grid"></div>
+        <div class="card" id="recent-card" style="display:none;margin-top:16px;">
+          <div class="card-head">⏱ Últimos movimientos</div>
+          <div id="recent-list"></div>
+        </div>
+      </div>
+
+      <!-- SALIDA -->
+      <div id="tab-salida" class="section">
+        <div class="card">
+          <div class="band band-red"><div class="band-icon">↑</div><div><div class="band-title" style="color:var(--red)">Registrar salida de insumo</div><div class="band-sub">Cuando se retira un insumo de bodega para uso</div></div></div>
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-group"><label>Categoría</label><select id="s-cat" onchange="filterByCat('s')"><option value="">Todas</option></select></div>
+              <div class="form-group"><label>Insumo</label><select id="s-item"><option value="">Seleccionar insumo...</option></select></div>
+              <div class="form-group"><label>Cantidad</label><input type="number" id="s-qty" value="1" min="0.1" step="0.1"></div>
+              <div class="form-group"><label>Responsable</label><input type="text" id="s-resp" placeholder="Nombre completo"></div>
+              <div class="form-group"><label>Área de destino</label><select id="s-area"><option value="">Seleccionar área...</option></select></div>
+              <div class="form-group"><label>Motivo</label><select id="s-motivo"><option value="">Seleccionar motivo...</option></select></div>
+              <div class="form-group form-full"><label>Observación (opcional)</label><input type="text" id="s-obs" placeholder="Detalles adicionales..."></div>
+            </div>
+            <button class="btn-primary btn-red" id="btn-salida" onclick="registrarSalida()">↑ Registrar salida</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ENTRADA / DEVOLUCIÓN -->
+      <div id="tab-entrada" class="section">
+        <div class="card">
+          <div class="band band-green"><div class="band-icon">↓</div><div><div class="band-title" style="color:var(--green)">Registrar entrada de insumo</div><div class="band-sub">Cuando ingresa a bodega un insumo que no fue consumido (sin ser una compra ni una devolución de un punto de limpieza)</div></div></div>
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-group"><label>Categoría</label><select id="e-cat" onchange="filterByCat('e')"><option value="">Todas</option></select></div>
+              <div class="form-group"><label>Insumo</label><select id="e-item"><option value="">Seleccionar insumo...</option></select></div>
+              <div class="form-group"><label>Cantidad</label><input type="number" id="e-qty" value="1" min="0.1" step="0.1"></div>
+              <div class="form-group"><label>Responsable</label><input type="text" id="e-resp" placeholder="Nombre completo"></div>
+              <div class="form-group"><label>Estado</label><select id="e-estado"><option>Completo / Sin abrir</option><option>Parcialmente usado</option><option>Casi vacío</option><option>Dañado / Dar de baja</option></select></div>
+              <div class="form-group form-full"><label>Observación (opcional)</label><input type="text" id="e-obs" placeholder="Estado del insumo, novedades..."></div>
+            </div>
+            <button class="btn-primary btn-green" id="btn-entrada" onclick="registrarEntrada()">↓ Registrar entrada</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMPRA / INGRESO -->
+      <div id="tab-compra" class="section">
+        <div class="card">
+          <div class="band band-blue"><div class="band-icon">📦</div><div><div class="band-title" style="color:var(--pri)">Registrar compra / ingreso de stock</div><div class="band-sub">Cuando llega mercadería nueva a bodega</div></div></div>
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-group"><label>Categoría</label><select id="c-cat" onchange="filterByCat('c')"><option value="">Todas</option></select></div>
+              <div class="form-group"><label>Insumo</label><select id="c-item"><option value="">Seleccionar insumo...</option></select></div>
+              <div class="form-group"><label>Cantidad recibida</label><input type="number" id="c-qty" value="1" min="0.1" step="0.1"></div>
+              <div class="form-group"><label>Proveedor</label><input type="text" id="c-proveedor" placeholder="Nombre del proveedor"></div>
+              <div class="form-group"><label>N° Factura / Referencia</label><input type="text" id="c-factura" placeholder="Ej: FAC-0012345"></div>
+              <div class="form-group"><label>Fecha de caducidad (opcional)</label><input type="date" id="c-caducidad"></div>
+              <div class="form-group form-full"><label>Observación (opcional)</label><input type="text" id="c-obs" placeholder="Lote, condición del pedido..."></div>
+            </div>
+            <button class="btn-primary btn-blue" id="btn-compra" onclick="registrarCompra()">📦 Registrar ingreso</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TRANSFERENCIA DE SALIDA (a un punto de limpieza) -->
+      <div id="tab-traslado" class="section">
+        <div class="card">
+          <div class="band band-purple"><div class="band-icon">🚚</div><div><div class="band-title" style="color:#6D28D9">Enviar insumo a un punto de limpieza</div><div class="band-sub">Se descuenta de San Felipe y se suma automáticamente al stock del punto seleccionado</div></div></div>
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-group"><label>Punto de destino</label><select id="t-destino"><option value="">Seleccionar punto...</option></select></div>
+              <div class="form-group"><label>Categoría</label><select id="t-cat" onchange="filterByCat('t')"><option value="">Todas</option></select></div>
+              <div class="form-group"><label>Insumo</label><select id="t-item"><option value="">Seleccionar insumo...</option></select></div>
+              <div class="form-group"><label>Cantidad a enviar</label><input type="number" id="t-qty" value="1" min="0.1" step="0.1"></div>
+              <div class="form-group"><label>Responsable del envío</label><input type="text" id="t-resp" placeholder="Nombre completo"></div>
+              <div class="form-group form-full"><label>Observación (opcional)</label><input type="text" id="t-obs" placeholder="Guía, transporte, novedades..."></div>
+            </div>
+            <button class="btn-primary" style="background:#7C3AED;color:white;" id="btn-traslado" onclick="registrarTraslado()">🚚 Enviar transferencia</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- HISTORIAL -->
+      <div id="tab-historial" class="section">
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+          <div class="search-bar" style="flex:1;min-width:200px;">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="filtro" placeholder="Buscar por insumo, responsable, área..." oninput="renderHistorial()">
+          </div>
+          <select id="filtro-tipo" onchange="renderHistorial()" style="width:160px;">
+            <option value="">Todos los tipos</option>
+            <option value="salida">Salidas</option>
+            <option value="entrada">Entradas locales</option>
+            <option value="compra">Compras</option>
+            <option value="traslado">Transferencias enviadas</option>
+            <option value="devolucion_recibida">Devoluciones de puntos</option>
+          </select>
+        </div>
+        <div class="card"><div id="historial-list"><div class="empty">Cargando...</div></div></div>
+      </div>
+
+      <!-- CONSUMO MENSUAL -->
+      <div id="tab-consumo" class="section">
+        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+          <select id="consumo-bodega" onchange="cambiarBodegaConsumo()" style="width:200px;"><option value="__local__">🏭 San Felipe (Base)</option></select>
+          <select id="consumo-mes" onchange="renderConsumo()" style="width:160px;"></select>
+          <select id="consumo-area" onchange="renderConsumo()" style="width:160px;"><option value="">Todas las áreas</option></select>
+        </div>
+        <div class="metrics" style="grid-template-columns:repeat(3,1fr);">
+          <div class="metric"><div class="metric-icon">📤</div><div class="metric-lbl">Salidas del mes</div><div class="metric-val" id="c-salidas" style="color:var(--red)">—</div></div>
+          <div class="metric"><div class="metric-icon">📦</div><div class="metric-lbl">Compras del mes</div><div class="metric-val" id="c-compras" style="color:var(--pri)">—</div></div>
+          <div class="metric"><div class="metric-icon">🔄</div><div class="metric-lbl">Devoluciones</div><div class="metric-val" id="c-devol" style="color:var(--green)">—</div></div>
+        </div>
+        <div class="card">
+          <div class="card-head">📊 Insumos más consumidos</div>
+          <div id="consumo-bars" style="padding:14px 18px;"></div>
+        </div>
+        <div class="card">
+          <div class="card-head">🏢 Consumo por área</div>
+          <div id="consumo-areas" style="padding:14px 18px;"></div>
+        </div>
+      </div>
+
+      <!-- VER BODEGAS (lectura de todas las bodegas, sin salir de San Felipe) -->
+      <div id="tab-bodegas" class="section">
+        <div id="bodegas-lock">
+          <div class="card"><div class="lock-box">
+            <div class="lock-icon">🔒</div>
+            <div class="lock-title">Área restringida</div>
+            <div class="lock-sub">Esta sección es solo para administradores.</div>
+            <button class="btn-unlock" onclick="openPin()">🔐 Ingresar contraseña</button>
+          </div></div>
+        </div>
+        <div id="bodegas-viewer-content" style="display:none;">
+          <div class="card">
+            <div class="card-head">🏢 Todas las bodegas <button class="btn-sm btn-edit" style="float:right;" onclick="actualizarVerBodegas()">🔄 Actualizar</button></div>
+            <div id="ver-bodegas-list"><div class="empty">Cargando...</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONFIGURACIÓN -->
+      <div id="tab-config" class="section">
+        <!-- Lock -->
+        <div id="config-lock">
+          <div class="card"><div class="lock-box">
+            <div class="lock-icon">🔒</div>
+            <div class="lock-title">Área restringida</div>
+            <div class="lock-sub">Esta sección es solo para administradores.</div>
+            <button class="btn-unlock" onclick="openPin()">🔐 Ingresar contraseña</button>
+          </div></div>
+        </div>
+        <!-- Content -->
+        <div id="config-content" style="display:none;">
+          <div class="admin-banner">
+            <div><span class="admin-badge">ADMIN</span><div class="admin-title">Sesión de administrador activa</div></div>
+            <div class="admin-actions">
+              <button class="btn-change-pw" onclick="openModal('modal-pw')">🔑 Cambiar contraseña</button>
+              <button class="btn-logout" onclick="logoutAdmin()">🔒 Cerrar sesión</button>
+            </div>
+          </div>
+          <div class="subtabs">
+            <button class="subtab active" id="st-articulos"  onclick="showSubTab('articulos')">🧴 Insumos</button>
+            <button class="subtab" id="st-categorias" onclick="showSubTab('categorias')">🏷️ Categorías</button>
+            <button class="subtab" id="st-areas"      onclick="showSubTab('areas')">🏢 Áreas</button>
+            <button class="subtab" id="st-motivos"    onclick="showSubTab('motivos')">📝 Motivos</button>
+            <button class="subtab" id="st-bodegas"    onclick="showSubTab('bodegas')">🏭 Bodegas</button>
+          </div>
+
+          <!-- Insumos -->
+          <div id="sub-articulos">
+            <div class="add-form">
+              <div class="add-form-title">➕ Agregar nuevo insumo</div>
+              <div class="add-row">
+                <div class="form-group"><label>Nombre</label><input type="text" id="new-nombre" placeholder="Ej: Cloro concentrado"></div>
+                <div class="form-group" style="max-width:100px"><label>Stock inicial</label><input type="number" id="new-stock" value="10" min="0" step="0.1"></div>
+                <div class="form-group" style="max-width:100px"><label>Stock mínimo</label><input type="number" id="new-minimo" value="3" min="0" step="0.1"></div>
+                <div class="form-group" style="max-width:110px"><label>Unidad</label>
+                  <select id="new-unidad"><option>unidades</option><option>litros</option><option>galones</option><option>kg</option><option>rollos</option><option>fundas</option><option>cajas</option><option>bolsas</option></select>
+                </div>
+                <div class="form-group"><label>Categoría</label><select id="new-cat-art"><option value="">Sin categoría</option></select></div>
+                <div class="form-group" style="max-width:130px"><label>&nbsp;</label><button class="btn-primary btn-blue" style="padding:9px;" onclick="agregarArticulo()">+ Agregar</button></div>
+              </div>
+            </div>
+            <div class="card"><div class="card-head" id="art-head">Insumos registrados</div><div id="art-list"><div class="empty">Cargando...</div></div></div>
+          </div>
+
+          <!-- Categorías -->
+          <div id="sub-categorias" style="display:none;">
+            <div class="add-form" style="background:var(--amber-l);border-color:var(--amber);">
+              <div class="add-form-title" style="color:#92400E;">➕ Agregar nueva categoría</div>
+              <div class="add-row">
+                <div class="form-group"><label>Nombre</label><input type="text" id="new-cat-nombre" placeholder="Ej: Desinfectantes"></div>
+                <div class="form-group" style="max-width:220px;">
+                  <label>Color</label>
+                  <div class="color-row" id="color-picker">
+                    <div class="color-opt selected" data-color="#2563EB" style="background:#2563EB" onclick="selectColor(this)"></div>
+                    <div class="color-opt" data-color="#DC2626" style="background:#DC2626" onclick="selectColor(this)"></div>
+                    <div class="color-opt" data-color="#16A34A" style="background:#16A34A" onclick="selectColor(this)"></div>
+                    <div class="color-opt" data-color="#D97706" style="background:#D97706" onclick="selectColor(this)"></div>
+                    <div class="color-opt" data-color="#7C3AED" style="background:#7C3AED" onclick="selectColor(this)"></div>
+                    <div class="color-opt" data-color="#0891B2" style="background:#0891B2" onclick="selectColor(this)"></div>
+                    <div class="color-opt" data-color="#BE185D" style="background:#BE185D" onclick="selectColor(this)"></div>
+                    <div class="color-opt" data-color="#065F46" style="background:#065F46" onclick="selectColor(this)"></div>
+                  </div>
+                </div>
+                <div class="form-group" style="max-width:130px"><label>&nbsp;</label><button class="btn-primary btn-amber" style="padding:9px;" onclick="agregarCategoria()">+ Agregar</button></div>
+              </div>
+            </div>
+            <div class="card"><div class="card-head">Categorías</div><div id="cat-list"><div class="empty">Cargando...</div></div></div>
+          </div>
+
+          <!-- Áreas -->
+          <div id="sub-areas" style="display:none;">
+            <div class="add-form" style="background:#F0FDF4;border-color:var(--green);">
+              <div class="add-form-title" style="color:var(--green);">➕ Agregar nueva área</div>
+              <div class="add-row">
+                <div class="form-group"><label>Nombre del área</label><input type="text" id="new-area-nombre" placeholder="Ej: Baños planta alta"></div>
+                <div class="form-group" style="max-width:130px"><label>&nbsp;</label><button class="btn-primary btn-green" style="padding:9px;" onclick="agregarAreaDirecta()">+ Agregar</button></div>
+              </div>
+            </div>
+            <div class="card"><div class="card-head">Áreas registradas</div><div id="area-list"><div class="empty">Cargando...</div></div></div>
+          </div>
+
+          <!-- Motivos -->
+          <div id="sub-motivos" style="display:none;">
+            <div class="add-form" style="background:#FFF1F5;border-color:#BE185D;">
+              <div class="add-form-title" style="color:#BE185D;">➕ Agregar nuevo motivo</div>
+              <div class="add-row">
+                <div class="form-group"><label>Descripción del motivo</label><input type="text" id="new-motivo-nombre" placeholder="Ej: Desinfección de equipos"></div>
+                <div class="form-group" style="max-width:130px"><label>&nbsp;</label><button class="btn-primary" style="padding:9px;background:#BE185D;color:white;" onclick="agregarMotivoDirecto()">+ Agregar</button></div>
+              </div>
+            </div>
+            <div class="card"><div class="card-head">Motivos registrados</div><div id="motivo-list"><div class="empty">Cargando...</div></div></div>
+          </div>
+
+          <!-- Bodegas (vista de todas las bodegas + registro de puntos nuevos) -->
+          <div id="sub-bodegas" style="display:none;">
+            <div class="add-form" style="background:#EDE9FE;border-color:#7C3AED;">
+              <div class="add-form-title" style="color:#6D28D9;">➕ Registrar nuevo punto de limpieza</div>
+              <div class="add-row">
+                <div class="form-group"><label>Nombre del punto</label><input type="text" id="new-punto-nombre" placeholder="Ej: Hospital del Día" oninput="sugerirSlugPunto()"></div>
+                <div class="form-group"><label>Identificador técnico (root)</label><input type="text" id="new-punto-root" placeholder="Ej: hospitaldeldia" oninput="this.dataset.touched='1'"></div>
+                <div class="form-group" style="max-width:150px"><label>&nbsp;</label><button class="btn-primary" style="padding:9px;background:#7C3AED;color:white;" onclick="agregarPunto()">+ Registrar</button></div>
+              </div>
+              <div style="font-size:12px;color:#6D28D9;margin-top:8px;line-height:1.5;">
+                ℹ️ Esto solo <b>registra</b> el punto para que aparezca como destino en "Transferencia de salida" y en esta vista.
+                Para que el punto funcione de verdad, hay que crear su página (una copia de <code>infectologia.html</code> apuntando a la ruta
+                de Firebase indicada arriba como "root") y subirla a GitHub Pages.
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-head">🏢 Todas las bodegas <button class="btn-sm btn-edit" style="float:right;" onclick="renderBodegas()">🔄 Actualizar</button></div>
+              <div id="bodegas-list"><div class="empty">Cargando...</div></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div><!-- /page -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, push, onValue, update, remove, get, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC_w0ztVN2lBjg-9Scl7Pn4HA5BpCwpTls",
+  authDomain: "inventario-insumos-bodega.firebaseapp.com",
+  databaseURL: "https://inventario-insumos-bodega-default-rtdb.firebaseio.com",
+  projectId: "inventario-insumos-bodega",
+  storageBucket: "inventario-insumos-bodega.firebasestorage.app",
+  messagingSenderId: "436223425478",
+  appId: "1:436223425478:web:595e7c9b98f8b406bad0c7"
+};
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let cats={}, arts={}, logData={}, areas={}, motivos={}, puntos={};
+let nombreBodega='San Felipe (Base)';
+let bodegasExpandidas={}, bodegaDataCache={}, consumoBodegaData=null;
+let adminPw='Matias2017', isAdmin=false, selColor='#2563EB', ready=false;
+let currentTab='dashboard', currentSubTab='articulos';
+
+// ── DEFAULT DATA ───────────────────────────────────────────────────────────────
+const DEF_CATS=[
+  {nombre:'Desinfectantes',color:'#DC2626'},
+  {nombre:'Limpiadores',color:'#2563EB'},
+  {nombre:'Papel y toallas',color:'#D97706'},
+  {nombre:'Implementos',color:'#16A34A'},
+  {nombre:'Fragancias',color:'#7C3AED'},
+];
+const DEF_ARTS=[
+  {nombre:'Cloro concentrado',stock:10,minimo:3,unidad:'litros',cat:0},
+  {nombre:'Desinfectante multiusos',stock:8,minimo:2,unidad:'litros',cat:0},
+  {nombre:'Alcohol antiséptico',stock:6,minimo:2,unidad:'litros',cat:0},
+  {nombre:'Limpiador de pisos',stock:12,minimo:4,unidad:'litros',cat:1},
+  {nombre:'Limpiavidrios',stock:5,minimo:2,unidad:'litros',cat:1},
+  {nombre:'Quitagrasas',stock:7,minimo:2,unidad:'litros',cat:1},
+  {nombre:'Papel higiénico',stock:48,minimo:12,unidad:'rollos',cat:2},
+  {nombre:'Toallas de mano',stock:24,minimo:6,unidad:'rollos',cat:2},
+  {nombre:'Papel de cocina',stock:12,minimo:4,unidad:'rollos',cat:2},
+  {nombre:'Escoba',stock:4,minimo:1,unidad:'unidades',cat:3},
+  {nombre:'Trapeador',stock:4,minimo:1,unidad:'unidades',cat:3},
+  {nombre:'Recogedor',stock:3,minimo:1,unidad:'unidades',cat:3},
+  {nombre:'Guantes de limpieza',stock:10,minimo:3,unidad:'unidades',cat:3},
+  {nombre:'Ambientador spray',stock:6,minimo:2,unidad:'unidades',cat:4},
+  {nombre:'Pastillas de baño',stock:12,minimo:4,unidad:'unidades',cat:4},
+];
+const DEF_AREAS=['Baños','Oficinas','Cocina','Pasillos','Exteriores'];
+const DEF_MOTIVOS=['Limpieza rutinaria','Reposición','Emergencia'];
+
+async function seedIfEmpty(){
+  const snap=await get(ref(db,'ins'));
+  if(snap.exists()) return;
+  const upd={};
+  const catKeys=[];
+  DEF_CATS.forEach(c=>{ const k=push(ref(db,'ins/cats')).key; upd[`ins/cats/${k}`]=c; catKeys.push(k); });
+  DEF_ARTS.forEach(a=>{ const k=push(ref(db,'ins/arts')).key; upd[`ins/arts/${k}`]={nombre:a.nombre,total:a.stock,enUso:0,minimo:a.minimo,unidad:a.unidad,catId:catKeys[a.cat]||''}; });
+  DEF_AREAS.forEach(a=>{ const k=push(ref(db,'ins/areas')).key; upd[`ins/areas/${k}`]={nombre:a}; });
+  DEF_MOTIVOS.forEach(m=>{ const k=push(ref(db,'ins/motivos')).key; upd[`ins/motivos/${k}`]={nombre:m}; });
+  upd['ins/config/adminPassword']='Matias2017';
+  upd['ins/config/nombreBodega']='San Felipe (Base)';
+  await update(ref(db),upd);
+}
+
+// ── LISTENERS ──────────────────────────────────────────────────────────────────
+function startListeners(){
+  onValue(ref(db,'ins/config/adminPassword'),s=>{ if(s.exists()) adminPw=s.val(); });
+  onValue(ref(db,'ins/config/nombreBodega'),s=>{ if(s.exists()){ nombreBodega=s.val(); aplicarNombreBodega(); } });
+  onValue(ref(db,'ins/cats'),s=>{ cats=s.val()||{}; refreshAll(); });
+  onValue(ref(db,'ins/areas'),s=>{ areas=s.val()||{}; refreshAll(); });
+  onValue(ref(db,'ins/motivos'),s=>{ motivos=s.val()||{}; refreshAll(); });
+  onValue(ref(db,'ins/puntos'),s=>{ puntos=s.val()||{}; refreshAll(); if(currentTab==='config'&&currentSubTab==='bodegas') renderBodegas(); if(currentTab==='bodegas'&&isAdmin) renderVerBodegas(); });
+  onValue(ref(db,'ins/arts'),s=>{
+    arts=s.val()||{}; refreshAll();
+    if(!ready){ ready=true; document.getElementById('ls').style.opacity='0'; setTimeout(()=>document.getElementById('ls').style.display='none',400); setSyncBadge(true); }
+  });
+  onValue(ref(db,'ins/log'),s=>{ logData=s.val()||{}; if(currentTab==='dashboard') renderDashboard(); if(currentTab==='historial') renderHistorial(); if(currentTab==='consumo') renderConsumo(); });
+}
+
+function refreshAll(){
+  if(currentTab==='dashboard') renderDashboard();
+  if(currentTab==='config'){ renderArticulos(); renderCategorias(); renderAreas(); renderMotivos(); if(currentSubTab==='bodegas') renderBodegas(); }
+  populateSelects();
+}
+
+function setSyncBadge(ok){
+  ['sd','sd-m'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.background=ok?'#22C55E':'#EF4444'; });
+  ['sl','sl-m'].forEach(id=>{ const e=document.getElementById(id); if(e) e.textContent=ok?'● En línea':'⚠ Sin conexión'; });
+}
+
+function aplicarNombreBodega(){
+  ['logo-sub','logo-sub-m'].forEach(id=>{ const e=document.getElementById(id); if(e) e.textContent=nombreBodega; });
+  const inp=document.getElementById('nombre-bodega-input'); if(inp&&document.activeElement!==inp) inp.value=nombreBodega;
+  if(currentTab==='config'&&currentSubTab==='bodegas') renderBodegas();
+  if(currentTab==='bodegas'&&isAdmin) renderVerBodegas();
+}
+
+// ── NAV ────────────────────────────────────────────────────────────────────────
+const PAGE_TITLES={dashboard:'📊 Resumen del inventario',salida:'↑ Registrar salida',entrada:'↓ Registrar entrada',compra:'📦 Registrar compra / ingreso',traslado:'🚚 Transferencia de salida',historial:'📋 Historial de movimientos',consumo:'📈 Consumo mensual',bodegas:'🏢 Ver bodegas',config:'⚙️ Configuración'};
+const MOB_TITLES={dashboard:'Resumen',salida:'Salida',entrada:'Entrada',compra:'Compra',traslado:'Transferencia',historial:'Historial',consumo:'Consumo',bodegas:'Bodegas',config:'Configuración'};
+
+window.showTab=function(id){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  const n=document.getElementById('nav-'+id); if(n) n.classList.add('active');
+  document.getElementById('page-title').textContent=PAGE_TITLES[id]||id;
+  document.getElementById('mob-title').textContent=MOB_TITLES[id]||id;
+  currentTab=id;
+  if(id==='dashboard') renderDashboard();
+  if(id==='historial') renderHistorial();
+  if(id==='consumo') renderConsumo();
+  if(id==='bodegas'){ updateAdminView(); if(isAdmin) renderVerBodegas(); }
+  if(id==='config'){ updateAdminView(); if(isAdmin){ renderArticulos(); renderCategorias(); renderAreas(); renderMotivos(); if(currentSubTab==='bodegas') renderBodegas(); } }
+};
+
+window.showSubTab=function(id){
+  ['articulos','categorias','areas','motivos','bodegas'].forEach(t=>{
+    document.getElementById('sub-'+t).style.display=t===id?'block':'none';
+    document.getElementById('st-'+t).classList.toggle('active',t===id);
+  });
+  currentSubTab=id;
+  if(id==='bodegas') renderBodegas();
+};
+
+window.closeMobNav=function(){ document.getElementById('mobNav').classList.remove('open'); };
+
+// ── MODALS ─────────────────────────────────────────────────────────────────────
+window.openModal=function(id){ document.getElementById(id).classList.add('open'); };
+window.closeModal=function(id){ document.getElementById(id).classList.remove('open'); };
+window.openPin=function(){
+  document.getElementById('pin-input').value='';
+  document.getElementById('pin-err').textContent='';
+  openModal('modal-pin');
+  setTimeout(()=>document.getElementById('pin-input').focus(),100);
+};
+
+window.checkPin=function(){
+  const val=document.getElementById('pin-input').value;
+  if(val===adminPw){ isAdmin=true; closeModal('modal-pin'); updateAdminView(); renderArticulos(); renderCategorias(); renderAreas(); renderMotivos(); populateSelects(); if(currentTab==='bodegas') renderVerBodegas(); showToast('✓ Sesión de administrador iniciada.'); }
+  else { document.getElementById('pin-err').textContent='Contraseña incorrecta.'; document.getElementById('pin-input').value=''; }
+};
+
+window.logoutAdmin=function(){ isAdmin=false; updateAdminView(); showToast('Sesión de administrador cerrada.'); };
+function updateAdminView(){
+  document.getElementById('config-lock').style.display=isAdmin?'none':'block';
+  document.getElementById('config-content').style.display=isAdmin?'block':'none';
+  const bl=document.getElementById('bodegas-lock'), bc=document.getElementById('bodegas-viewer-content');
+  if(bl&&bc){ bl.style.display=isAdmin?'none':'block'; bc.style.display=isAdmin?'block':'none'; }
+}
+
+window.changePassword=async function(){
+  const actual=document.getElementById('pw-actual').value;
+  const nueva=document.getElementById('pw-nueva').value;
+  const conf=document.getElementById('pw-confirm').value;
+  const err=document.getElementById('pw-err');
+  if(actual!==adminPw){ err.textContent='La contraseña actual es incorrecta.'; return; }
+  if(nueva.length<4){ err.textContent='La nueva contraseña debe tener al menos 4 caracteres.'; return; }
+  if(nueva!==conf){ err.textContent='Las contraseñas no coinciden.'; return; }
+  await set(ref(db,'ins/config/adminPassword'),nueva);
+  adminPw=nueva; closeModal('modal-pw'); showToast('✓ Contraseña actualizada.');
+};
+
+// ── TOAST ──────────────────────────────────────────────────────────────────────
+let toastT;
+window.showToast=function(msg,tipo='ok'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast-'+(tipo==='ok'?'ok':'err');
+  t.style.display='block'; clearTimeout(toastT); toastT=setTimeout(()=>t.style.display='none',3500);
+};
+
+// ── SELECTS ────────────────────────────────────────────────────────────────────
+function populateSelects(){
+  // Category selects
+  ['s-cat','e-cat','c-cat','t-cat','new-cat-art'].forEach(id=>{
+    const sel=document.getElementById(id); if(!sel) return;
+    const cur=sel.value;
+    sel.innerHTML='<option value="">'+(id==='new-cat-art'?'Sin categoría':'Todas')+'</option>';
+    Object.entries(cats).forEach(([k,c])=>{ const o=document.createElement('option'); o.value=k; o.textContent=c.nombre; sel.appendChild(o); });
+    if(cur) sel.value=cur;
+  });
+  // Areas
+  ['s-area'].forEach(id=>{
+    const sel=document.getElementById(id); if(!sel) return;
+    const cur=sel.value;
+    sel.innerHTML='<option value="">Seleccionar área...</option>';
+    Object.entries(areas).forEach(([k,a])=>{ const o=document.createElement('option'); o.value=k; o.textContent=a.nombre; sel.appendChild(o); });
+    if(cur) sel.value=cur;
+  });
+  // Motivos
+  ['s-motivo'].forEach(id=>{
+    const sel=document.getElementById(id); if(!sel) return;
+    const cur=sel.value;
+    sel.innerHTML='<option value="">Seleccionar motivo...</option>';
+    Object.entries(motivos).forEach(([k,m])=>{ const o=document.createElement('option'); o.value=k; o.textContent=m.nombre; sel.appendChild(o); });
+    if(cur) sel.value=cur;
+  });
+  // Puntos de destino (transferencia de salida)
+  const tdSel=document.getElementById('t-destino');
+  if(tdSel){
+    const cur=tdSel.value;
+    tdSel.innerHTML='<option value="">Seleccionar punto...</option>';
+    Object.entries(puntos).forEach(([k,p])=>{ const o=document.createElement('option'); o.value=k; o.textContent=p.nombre; tdSel.appendChild(o); });
+    if(cur) tdSel.value=cur;
+  }
+  // Selector de bodega en Consumo mensual (San Felipe + cada punto registrado)
+  const cbSel=document.getElementById('consumo-bodega');
+  if(cbSel){
+    const cur=cbSel.value||'__local__';
+    cbSel.innerHTML='<option value="__local__">🏭 '+nombreBodega+'</option>';
+    Object.entries(puntos).forEach(([k,p])=>{ const o=document.createElement('option'); o.value=k; o.textContent='🏥 '+p.nombre; cbSel.appendChild(o); });
+    if([...cbSel.options].some(o=>o.value===cur)) cbSel.value=cur;
+    if(cbSel.value==='__local__') poblarAreaSelectConsumo(areas);
+  }
+  filterByCat('s'); filterByCat('e'); filterByCat('c'); filterByCat('t');
+  populateConsumoMes();
+}
+
+function poblarAreaSelectConsumo(areasObj){
+  const sel=document.getElementById('consumo-area'); if(!sel) return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">Todas las áreas</option>';
+  Object.entries(areasObj||{}).forEach(([k,a])=>{ const o=document.createElement('option'); o.value=k; o.textContent=a.nombre; sel.appendChild(o); });
+  if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
+}
+
+// Cambia qué bodega se está viendo en Consumo mensual (San Felipe u otro punto)
+window.cambiarBodegaConsumo=async function(){
+  const sel=document.getElementById('consumo-bodega').value;
+  if(sel==='__local__'){
+    consumoBodegaData=null;
+    poblarAreaSelectConsumo(areas);
+    renderConsumo();
+    return;
+  }
+  const p=puntos[sel];
+  if(!p){ consumoBodegaData=null; renderConsumo(); return; }
+  document.getElementById('consumo-bars').innerHTML='<div class="empty">Cargando...</div>';
+  document.getElementById('consumo-areas').innerHTML='';
+  try{
+    const [logSnap,areasSnap]=await Promise.all([get(ref(db,`${p.root}/log`)),get(ref(db,`${p.root}/areas`))]);
+    consumoBodegaData={log:logSnap.val()||{}, areas:areasSnap.val()||{}};
+    poblarAreaSelectConsumo(consumoBodegaData.areas);
+  }catch(e){ showToast('No se pudo leer esa bodega.','err'); consumoBodegaData={log:{},areas:{}}; poblarAreaSelectConsumo({}); }
+  renderConsumo();
+};
+
+window.filterByCat=function(prefix){
+  const catSel=document.getElementById(prefix+'-cat');
+  const itemSel=document.getElementById(prefix+'-item');
+  if(!catSel||!itemSel) return;
+  const catId=catSel.value, cur=itemSel.value;
+  const isSalida=prefix==='s'||prefix==='t';
+  itemSel.innerHTML='<option value="">Seleccionar insumo...</option>';
+  Object.entries(arts).filter(([k,a])=>!catId||a.catId===catId).forEach(([k,a])=>{
+    const disp=+(a.total-a.enUso).toFixed(2);
+    const o=document.createElement('option');
+    o.value=k; o.textContent=isSalida?`${a.nombre} (${disp} ${a.unidad||'u'} disp.)`:a.nombre;
+    itemSel.appendChild(o);
+  });
+  if(cur) itemSel.value=cur;
+};
+
+function populateConsumoMes(){
+  const sel=document.getElementById('consumo-mes'); if(!sel) return;
+  const cur=sel.value;
+  sel.innerHTML='';
+  const now=new Date();
+  for(let i=0;i<12;i++){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    const val=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const lbl=d.toLocaleDateString('es-EC',{month:'long',year:'numeric'});
+    const o=document.createElement('option'); o.value=val; o.textContent=lbl.charAt(0).toUpperCase()+lbl.slice(1);
+    sel.appendChild(o);
+  }
+  if(cur) sel.value=cur;
+}
+
+// ── DASHBOARD ──────────────────────────────────────────────────────────────────
+function renderDashboard(){
+  const eqArr=Object.values(arts);
+  const total=+eqArr.reduce((a,e)=>a+e.total,0).toFixed(2);
+  const uso=+eqArr.reduce((a,e)=>a+e.enUso,0).toFixed(2);
+  const low=eqArr.filter(e=>(e.total-e.enUso)<=e.minimo).length;
+  document.getElementById('m-total').textContent=total;
+  document.getElementById('m-disp').textContent=+(total-uso).toFixed(2);
+  document.getElementById('m-uso').textContent=uso;
+  document.getElementById('m-low').textContent=low;
+
+  // Alert banner
+  const lowItems=Object.entries(arts).filter(([k,e])=>(e.total-e.enUso)<=e.minimo);
+  const alertBanner=document.getElementById('alert-stock');
+  const alertItems=document.getElementById('alert-items');
+  if(lowItems.length){ alertBanner.classList.add('show'); alertItems.innerHTML=lowItems.map(([k,e])=>`<div class="alert-item">• ${e.nombre}: quedan ${+(e.total-e.enUso).toFixed(2)} ${e.unidad||'u'} (mínimo: ${e.minimo})</div>`).join(''); }
+  else alertBanner.classList.remove('show');
+
+  // Category cards
+  const groups={};
+  Object.entries(arts).forEach(([k,a])=>{ const cid=a.catId||'__none__'; if(!groups[cid]) groups[cid]=[]; groups[cid].push({...a,id:k}); });
+  let html='';
+  Object.entries(cats).forEach(([cid,cat])=>{
+    const items=groups[cid]||[]; if(!items.length) return;
+    html+=`<div class="cat-card"><div class="cat-head"><div class="cat-dot" style="background:${cat.color}"></div><div class="cat-name">${cat.nombre}</div><div class="cat-count">${items.length}</div></div>`;
+    items.forEach(a=>{
+      const disp=+(a.total-a.enUso).toFixed(2);
+      const pct=a.total>0?Math.round(disp/a.total*100):0;
+      const c=pct>30?'#16A34A':pct>10?'#D97706':'#DC2626';
+      const isLow=(a.total-a.enUso)<=a.minimo;
+      html+=`<div class="art-row"><div class="art-name">${a.nombre}${isLow?'<span class="low-badge">Stock bajo</span>':''}</div><span class="art-unit">${a.unidad||'u'}</span><div class="art-bar-bg"><div class="art-bar-fill" style="width:${pct}%;background:${c}"></div></div><div class="art-nums" style="color:${c};font-weight:700">${disp}</div></div>`;
+    });
+    html+='</div>';
+  });
+  if(groups['__none__']?.length){
+    html+=`<div class="cat-card"><div class="cat-head"><div class="cat-dot" style="background:#9CA3AF"></div><div class="cat-name">Sin categoría</div><div class="cat-count">${groups['__none__'].length}</div></div>`;
+    groups['__none__'].forEach(a=>{ const disp=+(a.total-a.enUso).toFixed(2); const pct=a.total>0?Math.round(disp/a.total*100):0; const c=pct>30?'#16A34A':pct>10?'#D97706':'#DC2626'; html+=`<div class="art-row"><div class="art-name">${a.nombre}</div><span class="art-unit">${a.unidad||'u'}</span><div class="art-bar-bg"><div class="art-bar-fill" style="width:${pct}%;background:${c}"></div></div><div class="art-nums" style="color:${c};font-weight:700">${disp}</div></div>`; });
+    html+='</div>';
+  }
+  document.getElementById('cat-grid').innerHTML=html||'<div class="empty">Sin insumos registrados.</div>';
+
+  // Recent
+  const recent=Object.values(logData).sort((a,b)=>b.ts-a.ts).slice(0,5);
+  const rc=document.getElementById('recent-card');
+  if(recent.length){
+    rc.style.display='block';
+    document.getElementById('recent-list').innerHTML=recent.map(r=>`
+      <div class="log-row">
+        <span class="badge badge-${r.tipo}">${r.tipo==='salida'?'↑ Salida':r.tipo==='compra'?'📦 Compra':r.tipo==='traslado'?'🚚 Transferencia':r.tipo==='devolucion_recibida'?'↩️ Devolución':'↓ Entrada'}</span>
+        <div class="log-main"><div class="log-name">${r.itemNombre} ×${r.qty} ${r.unidad||''}</div><div class="log-sub">${r.resp||r.proveedor||''}${r.destino?' → '+r.destino:''}${r.origen?' ← '+r.origen:''} · ${r.fecha}</div></div>
+      </div>`).join('');
+  } else rc.style.display='none';
+}
+
+// ── SPINNER HTML ───────────────────────────────────────────────────────────────
+const spinHtml='<span style="display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;"></span>';
+
+// ── SALIDA ─────────────────────────────────────────────────────────────────────
+window.registrarSalida=async function(){
+  const itemId=document.getElementById('s-item').value;
+  const qty=parseFloat(document.getElementById('s-qty').value)||0;
+  const resp=document.getElementById('s-resp').value.trim();
+  const areaId=document.getElementById('s-area').value;
+  const motivoId=document.getElementById('s-motivo').value;
+  const obs=document.getElementById('s-obs').value.trim();
+  if(!itemId) return showToast('Selecciona un insumo.','err');
+  if(!qty||qty<=0) return showToast('Ingresa una cantidad válida.','err');
+  if(!resp) return showToast('Ingresa el nombre del responsable.','err');
+  if(!areaId) return showToast('Selecciona el área de destino.','err');
+  if(!motivoId) return showToast('Selecciona el motivo.','err');
+  const a=arts[itemId]; const disp=+(a.total-a.enUso).toFixed(2);
+  if(qty>disp) return showToast(`Solo hay ${disp} ${a.unidad||'u'} disponibles.`,'err');
+  const btn=document.getElementById('btn-salida'); btn.disabled=true; btn.innerHTML=spinHtml+'Guardando...';
+  try{
+    await update(ref(db,`ins/arts/${itemId}`),{enUso:+(a.enUso+qty).toFixed(2)});
+    const area=areas[areaId]; const motivo=motivos[motivoId];
+    await push(ref(db,'ins/log'),{tipo:'salida',itemId,itemNombre:a.nombre,qty,unidad:a.unidad||'u',resp,areaNombre:area?.nombre||'',motivoNombre:motivo?.nombre||'',obs,fecha:now(),ts:Date.now(),mes:mesKey()});
+    showToast('✓ Salida registrada.');
+    ['s-item','s-resp','s-obs'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('s-qty').value=1;
+  }catch(e){showToast('Error al guardar.','err');}
+  btn.disabled=false; btn.innerHTML='↑ Registrar salida';
+};
+
+// ── ENTRADA ────────────────────────────────────────────────────────────────────
+window.registrarEntrada=async function(){
+  const itemId=document.getElementById('e-item').value;
+  const qty=parseFloat(document.getElementById('e-qty').value)||0;
+  const resp=document.getElementById('e-resp').value.trim();
+  const estado=document.getElementById('e-estado').value;
+  const obs=document.getElementById('e-obs').value.trim();
+  if(!itemId) return showToast('Selecciona un insumo.','err');
+  if(!qty||qty<=0) return showToast('Ingresa una cantidad válida.','err');
+  if(!resp) return showToast('Ingresa el nombre del responsable.','err');
+  const a=arts[itemId];
+  const btn=document.getElementById('btn-entrada'); btn.disabled=true; btn.innerHTML=spinHtml+'Guardando...';
+  try{
+    await update(ref(db,`ins/arts/${itemId}`),{enUso:Math.max(0,+(a.enUso-qty).toFixed(2))});
+    await push(ref(db,'ins/log'),{tipo:'entrada',itemId,itemNombre:a.nombre,qty,unidad:a.unidad||'u',resp,estado,obs,fecha:now(),ts:Date.now(),mes:mesKey()});
+    showToast('✓ Entrada registrada.');
+    ['e-item','e-resp','e-obs'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('e-qty').value=1;
+  }catch(e){showToast('Error al guardar.','err');}
+  btn.disabled=false; btn.innerHTML='↓ Registrar entrada';
+};
+
+// ── COMPRA ─────────────────────────────────────────────────────────────────────
+window.registrarCompra=async function(){
+  const itemId=document.getElementById('c-item').value;
+  const qty=parseFloat(document.getElementById('c-qty').value)||0;
+  const proveedor=document.getElementById('c-proveedor').value.trim();
+  const factura=document.getElementById('c-factura').value.trim();
+  const caducidad=document.getElementById('c-caducidad').value;
+  const obs=document.getElementById('c-obs').value.trim();
+  if(!itemId) return showToast('Selecciona un insumo.','err');
+  if(!qty||qty<=0) return showToast('Ingresa una cantidad válida.','err');
+  if(!proveedor) return showToast('Ingresa el nombre del proveedor.','err');
+  const a=arts[itemId];
+  const btn=document.getElementById('btn-compra'); btn.disabled=true; btn.innerHTML=spinHtml+'Guardando...';
+  try{
+    await update(ref(db,`ins/arts/${itemId}`),{total:+(a.total+qty).toFixed(2)});
+    await push(ref(db,'ins/log'),{tipo:'compra',itemId,itemNombre:a.nombre,qty,unidad:a.unidad||'u',proveedor,factura,caducidad,obs,fecha:now(),ts:Date.now(),mes:mesKey()});
+    showToast('✓ Ingreso registrado. Stock actualizado.');
+    ['c-item','c-proveedor','c-factura','c-caducidad','c-obs'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('c-qty').value=1;
+  }catch(e){showToast('Error al guardar.','err');}
+  btn.disabled=false; btn.innerHTML='📦 Registrar ingreso';
+};
+
+// ── TRANSFERENCIA DE SALIDA (a cualquier punto de limpieza registrado) ──────────
+window.registrarTraslado=async function(){
+  const destinoId=document.getElementById('t-destino').value;
+  const itemId=document.getElementById('t-item').value;
+  const qty=parseFloat(document.getElementById('t-qty').value)||0;
+  const resp=document.getElementById('t-resp').value.trim();
+  const obs=document.getElementById('t-obs').value.trim();
+  if(!destinoId) return showToast('Selecciona el punto de destino.','err');
+  if(!itemId) return showToast('Selecciona un insumo.','err');
+  if(!qty||qty<=0) return showToast('Ingresa una cantidad válida.','err');
+  if(!resp) return showToast('Ingresa el nombre del responsable del envío.','err');
+  const punto=puntos[destinoId];
+  if(!punto||!punto.root) return showToast('Ese punto ya no está disponible.','err');
+  const DESTINO_ROOT=punto.root, DESTINO_NOMBRE=punto.nombre;
+  const a=arts[itemId]; const disp=+(a.total-a.enUso).toFixed(2);
+  if(qty>disp) return showToast(`Solo hay ${disp} ${a.unidad||'u'} disponibles.`,'err');
+
+  const btn=document.getElementById('btn-traslado'); btn.disabled=true; btn.innerHTML=spinHtml+'Enviando...';
+  try{
+    // 1. Buscar si el insumo ya existe en el punto de destino (comparando por nombre)
+    const destArtsSnap=await get(ref(db,`${DESTINO_ROOT}/arts`));
+    const destArts=destArtsSnap.val()||{};
+    let destItemId=Object.entries(destArts).find(([k,d])=>(d.nombre||'').trim().toLowerCase()===a.nombre.trim().toLowerCase())?.[0];
+
+    const updates={};
+    const fechaMov=now(), tsMov=Date.now(), mesMov=mesKey();
+
+    // 2. Descontar definitivamente del stock de San Felipe (sale de esta bodega)
+    updates[`ins/arts/${itemId}/total`]=+(a.total-qty).toFixed(2);
+    const logOrigenKey=push(ref(db,'ins/log')).key;
+    updates[`ins/log/${logOrigenKey}`]={tipo:'traslado',itemId,itemNombre:a.nombre,qty,unidad:a.unidad||'u',resp,destino:DESTINO_NOMBRE,obs,fecha:fechaMov,ts:tsMov,mes:mesMov};
+
+    // 3. Sumar en el punto de destino (crear el insumo y su categoría si no existen)
+    if(destItemId){
+      const d=destArts[destItemId];
+      updates[`${DESTINO_ROOT}/arts/${destItemId}/total`]=+(d.total+qty).toFixed(2);
+    } else {
+      destItemId=push(ref(db,`${DESTINO_ROOT}/arts`)).key;
+      let destCatId='';
+      if(a.catId&&cats[a.catId]){
+        const catNombre=cats[a.catId].nombre;
+        const destCatsSnap=await get(ref(db,`${DESTINO_ROOT}/cats`));
+        const destCats=destCatsSnap.val()||{};
+        const found=Object.entries(destCats).find(([k,c])=>(c.nombre||'').trim().toLowerCase()===catNombre.trim().toLowerCase());
+        if(found) destCatId=found[0];
+        else{
+          const newCatKey=push(ref(db,`${DESTINO_ROOT}/cats`)).key;
+          updates[`${DESTINO_ROOT}/cats/${newCatKey}`]={nombre:catNombre,color:cats[a.catId].color};
+          destCatId=newCatKey;
+        }
+      }
+      updates[`${DESTINO_ROOT}/arts/${destItemId}`]={nombre:a.nombre,total:qty,enUso:0,minimo:a.minimo||0,unidad:a.unidad||'u',catId:destCatId};
+    }
+    const logDestinoKey=push(ref(db,`${DESTINO_ROOT}/log`)).key;
+    updates[`${DESTINO_ROOT}/log/${logDestinoKey}`]={tipo:'traslado_recibido',itemId:destItemId,itemNombre:a.nombre,qty,unidad:a.unidad||'u',origen:nombreBodega,resp,obs,fecha:fechaMov,ts:tsMov,mes:mesMov};
+
+    // 4. Guardar todo en una sola operación atómica (ambas bodegas se actualizan juntas o ninguna)
+    await update(ref(db),updates);
+    showToast(`✓ ${qty} ${a.unidad||'u'} de ${a.nombre} enviado(s) a ${DESTINO_NOMBRE}.`);
+    ['t-destino','t-item','t-resp','t-obs'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('t-qty').value=1;
+  }catch(e){ console.error(e); showToast('Error al registrar la transferencia.','err'); }
+  btn.disabled=false; btn.innerHTML='🚚 Enviar transferencia';
+};
+
+// ── HISTORIAL ──────────────────────────────────────────────────────────────────
+window.renderHistorial=function(){
+  const filtro=document.getElementById('filtro').value.toLowerCase();
+  const tipo=document.getElementById('filtro-tipo').value;
+  let items=Object.values(logData).sort((a,b)=>b.ts-a.ts);
+  if(tipo) items=items.filter(r=>r.tipo===tipo);
+  if(filtro) items=items.filter(r=>r.itemNombre?.toLowerCase().includes(filtro)||r.resp?.toLowerCase().includes(filtro)||r.areaNombre?.toLowerCase().includes(filtro)||r.proveedor?.toLowerCase().includes(filtro));
+  if(!items.length){document.getElementById('historial-list').innerHTML='<div class="empty">'+(filtro||tipo?'Sin resultados.':'Sin movimientos aún.')+'</div>';return;}
+  const badgeLbl=r=>r.tipo==='salida'?'↑ Salida':r.tipo==='compra'?'📦 Compra':r.tipo==='traslado'?'🚚 Transferencia':r.tipo==='devolucion_recibida'?'↩️ Devolución recibida':'↓ Entrada';
+  document.getElementById('historial-list').innerHTML=items.map(r=>`
+    <div class="log-row">
+      <span class="badge badge-${r.tipo}">${badgeLbl(r)}</span>
+      <div class="log-main">
+        <div class="log-name">${r.itemNombre} <span style="font-weight:400;color:var(--text-m)">×${r.qty} ${r.unidad||''}</span></div>
+        <div class="log-sub">${r.tipo==='compra'?(r.proveedor||'')+(r.factura?' · '+r.factura:''):(r.resp||'')}${r.areaNombre?' → '+r.areaNombre:''}${r.destino?' → '+r.destino:''}${r.origen?' ← '+r.origen:''}${r.motivoNombre?' · '+r.motivoNombre:''}${r.estado?' · '+r.estado:''}${r.obs?' · '+r.obs:''}</div>
+        <div class="log-sub">${r.fecha}${r.caducidad?' · Vence: '+r.caducidad:''}</div>
+      </div>
+    </div>`).join('');
+};
+
+// ── CONSUMO ────────────────────────────────────────────────────────────────────
+window.renderConsumo=function(){
+  const mes=document.getElementById('consumo-mes')?.value||mesKey();
+  const areaFiltro=document.getElementById('consumo-area')?.value||'';
+  const logActual=consumoBodegaData?consumoBodegaData.log:logData;
+  const areasActual=consumoBodegaData?consumoBodegaData.areas:areas;
+  const items=Object.values(logActual).filter(r=>r.mes===mes&&(!areaFiltro||r.areaId===areaFiltro||r.areaNombre===areasActual[areaFiltro]?.nombre));
+  const salidas=items.filter(r=>r.tipo==='salida');
+  const compras=items.filter(r=>r.tipo==='compra');
+  const devols=items.filter(r=>r.tipo==='entrada');
+  document.getElementById('c-salidas').textContent=+salidas.reduce((a,r)=>a+r.qty,0).toFixed(2);
+  document.getElementById('c-compras').textContent=+compras.reduce((a,r)=>a+r.qty,0).toFixed(2);
+  document.getElementById('c-devol').textContent=+devols.reduce((a,r)=>a+r.qty,0).toFixed(2);
+
+  // Top insumos
+  const byArt={};
+  salidas.forEach(r=>{ byArt[r.itemNombre]=(byArt[r.itemNombre]||0)+r.qty; });
+  const sortedArt=Object.entries(byArt).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const maxArt=sortedArt[0]?.[1]||1;
+  document.getElementById('consumo-bars').innerHTML=sortedArt.length?sortedArt.map(([name,val])=>`
+    <div class="consumo-bar">
+      <div class="consumo-name">${name}</div>
+      <div class="consumo-track"><div class="consumo-fill" style="width:${Math.round(val/maxArt*100)}%"></div></div>
+      <div class="consumo-val">${+val.toFixed(2)}</div>
+    </div>`).join(''):'<div class="empty">Sin salidas en este período.</div>';
+
+  // Por área
+  const byArea={};
+  salidas.forEach(r=>{ const an=r.areaNombre||'Sin área'; byArea[an]=(byArea[an]||0)+r.qty; });
+  const sortedArea=Object.entries(byArea).sort((a,b)=>b[1]-a[1]);
+  const maxArea=sortedArea[0]?.[1]||1;
+  document.getElementById('consumo-areas').innerHTML=sortedArea.length?sortedArea.map(([name,val])=>`
+    <div class="consumo-bar">
+      <div class="consumo-name">${name}</div>
+      <div class="consumo-track"><div class="consumo-fill" style="width:${Math.round(val/maxArea*100)}%;background:#7C3AED"></div></div>
+      <div class="consumo-val">${+val.toFixed(2)}</div>
+    </div>`).join(''):'<div class="empty">Sin datos para este período.</div>';
+};
+
+// ── ARTICULOS ──────────────────────────────────────────────────────────────────
+window.renderArticulos=function(){
+  const entries=Object.entries(arts);
+  document.getElementById('art-head').textContent=`Insumos registrados (${entries.length})`;
+  if(!entries.length){document.getElementById('art-list').innerHTML='<div class="empty">Sin insumos.</div>';return;}
+  document.getElementById('art-list').innerHTML=entries.map(([k,a])=>{
+    const cat=cats[a.catId]; const disp=+(a.total-a.enUso).toFixed(2); const isLow=disp<=a.minimo;
+    return `<div class="art-item" id="art-${k}">
+      <div class="art-item-dot" style="background:${cat?.color||'#9CA3AF'}"></div>
+      <div class="art-item-info">
+        <div class="art-item-name">${a.nombre}${isLow?'<span class="low-badge">Stock bajo</span>':''}</div>
+        <div class="art-item-meta">${cat?.nombre||'Sin cat.'} · ${a.unidad||'u'} · Total: ${a.total} · En uso: ${a.enUso} · Disp: <b style="color:${isLow?'var(--red)':'var(--green)'}">${disp}</b> · Mín: ${a.minimo}</div>
+      </div>
+      <button class="btn-sm btn-edit" onclick="editArt('${k}')">Editar</button>
+      <button class="btn-sm btn-del" onclick="delArt('${k}')">Eliminar</button>
+    </div>`;
+  }).join('');
+};
+
+window.editArt=function(k){
+  const a=arts[k];
+  const catOpts=Object.entries(cats).map(([ck,c])=>`<option value="${ck}"${a.catId===ck?' selected':''}>${c.nombre}</option>`).join('');
+  const unitOpts=['unidades','litros','galones','kg','rollos','fundas','cajas','bolsas'].map(u=>`<option${a.unidad===u?' selected':''}>${u}</option>`).join('');
+  document.getElementById('art-'+k).innerHTML=`
+    <div style="display:flex;gap:6px;flex-wrap:wrap;width:100%;align-items:center;">
+      <input type="text" id="en-${k}" value="${a.nombre}" style="flex:1;min-width:120px;">
+      <input type="number" id="es-${k}" value="${a.total}" min="${a.enUso}" step="0.1" style="width:75px;" placeholder="Total">
+      <input type="number" id="em-${k}" value="${a.minimo}" min="0" step="0.1" style="width:70px;" placeholder="Mín">
+      <select id="eu-${k}" style="width:100px;">${unitOpts}</select>
+      <select id="ec-${k}" style="width:130px;"><option value="">Sin categoría</option>${catOpts}</select>
+      <button class="btn-sm btn-save-sm" onclick="saveArt('${k}')">Guardar</button>
+      <button class="btn-sm btn-cancel-sm" onclick="renderArticulos()">Cancelar</button>
+    </div>`;
+};
+
+window.saveArt=async function(k){
+  const nombre=document.getElementById('en-'+k).value.trim();
+  const total=parseFloat(document.getElementById('es-'+k).value)||0;
+  const minimo=parseFloat(document.getElementById('em-'+k).value)||0;
+  const unidad=document.getElementById('eu-'+k).value;
+  const catId=document.getElementById('ec-'+k).value;
+  if(!nombre) return showToast('El nombre no puede estar vacío.','err');
+  await update(ref(db,`ins/arts/${k}`),{nombre,total,minimo,unidad,catId});
+  showToast('✓ Insumo actualizado.');
+};
+
+window.delArt=async function(k){
+  if(!confirm('¿Eliminar este insumo?')) return;
+  await remove(ref(db,`ins/arts/${k}`)); showToast('Insumo eliminado.');
+};
+
+window.agregarArticulo=async function(){
+  const nombre=document.getElementById('new-nombre').value.trim();
+  const total=parseFloat(document.getElementById('new-stock').value)||0;
+  const minimo=parseFloat(document.getElementById('new-minimo').value)||0;
+  const unidad=document.getElementById('new-unidad').value;
+  const catId=document.getElementById('new-cat-art').value;
+  if(!nombre) return showToast('Ingresa el nombre del insumo.','err');
+  await push(ref(db,'ins/arts'),{nombre,total,enUso:0,minimo,unidad,catId});
+  showToast('✓ Insumo agregado.');
+  document.getElementById('new-nombre').value='';
+  document.getElementById('new-stock').value=10;
+  document.getElementById('new-minimo').value=3;
+};
+
+// ── CATEGORÍAS ─────────────────────────────────────────────────────────────────
+window.renderCategorias=function(){
+  const entries=Object.entries(cats);
+  if(!entries.length){document.getElementById('cat-list').innerHTML='<div class="empty">Sin categorías.</div>';return;}
+  document.getElementById('cat-list').innerHTML=entries.map(([k,c])=>{
+    const count=Object.values(arts).filter(a=>a.catId===k).length;
+    return `<div class="art-item" id="cat-${k}">
+      <div class="art-item-dot" style="background:${c.color}"></div>
+      <div class="art-item-info"><div class="art-item-name">${c.nombre}</div><div class="art-item-meta">${count} insumo(s)</div></div>
+      <button class="btn-sm btn-edit" onclick="editCat('${k}')">Editar</button>
+      <button class="btn-sm btn-del" onclick="delCat('${k}')">Eliminar</button>
+    </div>`;
+  }).join('');
+};
+
+window.editCat=function(k){
+  const c=cats[k];
+  const colors=['#2563EB','#DC2626','#16A34A','#D97706','#7C3AED','#0891B2','#BE185D','#065F46'];
+  const colorDivs=colors.map(col=>`<div style="width:20px;height:20px;border-radius:50%;cursor:pointer;background:${col};border:2px solid ${c.color===col?'#111':'transparent'};display:inline-block;" onclick="this.parentNode.querySelectorAll('div').forEach(x=>x.style.border='2px solid transparent');this.style.border='2px solid #111';document.getElementById('cat-edit-${k}').dataset.col='${col}';"></div>`).join('');
+  document.getElementById('cat-'+k).innerHTML=`
+    <div style="display:flex;gap:6px;flex-wrap:wrap;width:100%;align-items:center;" id="cat-edit-${k}" data-col="${c.color}">
+      <input type="text" id="cn-${k}" value="${c.nombre}" style="flex:1;min-width:120px;">
+      <div style="display:flex;gap:4px;flex-wrap:wrap;">${colorDivs}</div>
+      <button class="btn-sm btn-save-sm" onclick="saveCat('${k}')">Guardar</button>
+      <button class="btn-sm btn-cancel-sm" onclick="renderCategorias()">Cancelar</button>
+    </div>`;
+};
+
+window.saveCat=async function(k){
+  const nombre=document.getElementById('cn-'+k).value.trim();
+  const color=document.getElementById('cat-edit-'+k).dataset.col||'#2563EB';
+  if(!nombre) return showToast('El nombre no puede estar vacío.','err');
+  await update(ref(db,`ins/cats/${k}`),{nombre,color}); showToast('✓ Categoría actualizada.');
+};
+
+window.agregarCategoria=async function(){
+  const nombre=document.getElementById('new-cat-nombre').value.trim();
+  if(!nombre) return showToast('Ingresa el nombre de la categoría.','err');
+  await push(ref(db,'ins/cats'),{nombre,color:selColor});
+  showToast('✓ Categoría agregada.'); document.getElementById('new-cat-nombre').value='';
+};
+
+window.delCat=async function(k){
+  const count=Object.values(arts).filter(a=>a.catId===k).length;
+  if(count>0&&!confirm(`Esta categoría tiene ${count} insumo(s). ¿Eliminar?`)) return;
+  await remove(ref(db,`ins/cats/${k}`)); showToast('Categoría eliminada.');
+};
+
+// ── ÁREAS ──────────────────────────────────────────────────────────────────────
+window.renderAreas=function(){
+  const entries=Object.entries(areas);
+  if(!entries.length){document.getElementById('area-list').innerHTML='<div class="empty">Sin áreas.</div>';return;}
+  document.getElementById('area-list').innerHTML=entries.map(([k,a])=>`
+    <div class="art-item" id="area-${k}">
+      <div style="font-size:16px;">🏢</div>
+      <div class="art-item-info"><div class="art-item-name">${a.nombre}</div></div>
+      <button class="btn-sm btn-edit" onclick="editArea('${k}')">Editar</button>
+      <button class="btn-sm btn-del" onclick="delArea('${k}')">Eliminar</button>
+    </div>`).join('');
+};
+
+window.editArea=function(k){
+  const a=areas[k];
+  document.getElementById('area-'+k).innerHTML=`
+    <div style="display:flex;gap:6px;width:100%;align-items:center;">
+      <input type="text" id="an-${k}" value="${a.nombre}" style="flex:1;">
+      <button class="btn-sm btn-save-sm" onclick="saveArea('${k}')">Guardar</button>
+      <button class="btn-sm btn-cancel-sm" onclick="renderAreas()">Cancelar</button>
+    </div>`;
+};
+
+window.saveArea=async function(k){
+  const nombre=document.getElementById('an-'+k).value.trim();
+  if(!nombre) return showToast('El nombre no puede estar vacío.','err');
+  await update(ref(db,`ins/areas/${k}`),{nombre}); showToast('✓ Área actualizada.');
+};
+
+window.agregarAreaDirecta=async function(){
+  const nombre=document.getElementById('new-area-nombre').value.trim();
+  if(!nombre) return showToast('Ingresa el nombre del área.','err');
+  await push(ref(db,'ins/areas'),{nombre});
+  showToast('✓ Área agregada.'); document.getElementById('new-area-nombre').value='';
+};
+
+window.delArea=async function(k){
+  if(!confirm('¿Eliminar esta área?')) return;
+  await remove(ref(db,`ins/areas/${k}`)); showToast('Área eliminada.');
+};
+
+// ── MOTIVOS ────────────────────────────────────────────────────────────────────
+window.renderMotivos=function(){
+  const entries=Object.entries(motivos);
+  if(!entries.length){document.getElementById('motivo-list').innerHTML='<div class="empty">Sin motivos.</div>';return;}
+  document.getElementById('motivo-list').innerHTML=entries.map(([k,m])=>`
+    <div class="art-item" id="mot-${k}">
+      <div style="font-size:16px;">📝</div>
+      <div class="art-item-info"><div class="art-item-name">${m.nombre}</div></div>
+      <button class="btn-sm btn-edit" onclick="editMotivo('${k}')">Editar</button>
+      <button class="btn-sm btn-del" onclick="delMotivo('${k}')">Eliminar</button>
+    </div>`).join('');
+};
+
+window.editMotivo=function(k){
+  const m=motivos[k];
+  document.getElementById('mot-'+k).innerHTML=`
+    <div style="display:flex;gap:6px;width:100%;align-items:center;">
+      <input type="text" id="mn-${k}" value="${m.nombre}" style="flex:1;">
+      <button class="btn-sm btn-save-sm" onclick="saveMotivo('${k}')">Guardar</button>
+      <button class="btn-sm btn-cancel-sm" onclick="renderMotivos()">Cancelar</button>
+    </div>`;
+};
+
+window.saveMotivo=async function(k){
+  const nombre=document.getElementById('mn-'+k).value.trim();
+  if(!nombre) return showToast('El nombre no puede estar vacío.','err');
+  await update(ref(db,`ins/motivos/${k}`),{nombre}); showToast('✓ Motivo actualizado.');
+};
+
+window.agregarMotivoDirecto=async function(){
+  const nombre=document.getElementById('new-motivo-nombre').value.trim();
+  if(!nombre) return showToast('Ingresa el nombre del motivo.','err');
+  await push(ref(db,'ins/motivos'),{nombre});
+  showToast('✓ Motivo agregado.'); document.getElementById('new-motivo-nombre').value='';
+};
+
+window.delMotivo=async function(k){
+  if(!confirm('¿Eliminar este motivo?')) return;
+  await remove(ref(db,`ins/motivos/${k}`)); showToast('Motivo eliminado.');
+};
+
+// ── BODEGAS (puntos de limpieza) ────────────────────────────────────────────────
+function slugify(str){
+  return (str||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase().replace(/[^a-z0-9]+/g,'').trim();
+}
+
+window.sugerirSlugPunto=function(){
+  const nombre=document.getElementById('new-punto-nombre').value;
+  const rootInput=document.getElementById('new-punto-root');
+  if(!rootInput.dataset.touched) rootInput.value=slugify(nombre);
+};
+
+window.agregarPunto=async function(){
+  const nombre=document.getElementById('new-punto-nombre').value.trim();
+  let root=slugify(document.getElementById('new-punto-root').value);
+  if(!nombre) return showToast('Ingresa el nombre del punto de limpieza.','err');
+  if(!root) return showToast('Ingresa un identificador técnico (root) válido.','err');
+  const yaExiste=Object.values(puntos).some(p=>p.root===root);
+  if(yaExiste) return showToast('Ya existe un punto registrado con ese identificador.','err');
+  await push(ref(db,'ins/puntos'),{nombre,root});
+  showToast('✓ Punto registrado. Ahora crea su página web para activarlo.');
+  document.getElementById('new-punto-nombre').value='';
+  document.getElementById('new-punto-root').value='';
+  document.getElementById('new-punto-root').dataset.touched='';
+};
+
+window.delPunto=async function(k){
+  if(!confirm('¿Quitar este punto del registro? Esto NO borra su inventario ni su historial, solo deja de aparecer como destino de transferencias.')) return;
+  await remove(ref(db,`ins/puntos/${k}`)); showToast('Punto quitado del registro.');
+};
+
+window.guardarNombreBodega=async function(){
+  const nombre=document.getElementById('nombre-bodega-input').value.trim();
+  if(!nombre) return showToast('El nombre no puede estar vacío.','err');
+  await set(ref(db,'ins/config/nombreBodega'),nombre);
+  showToast('✓ Nombre de la bodega actualizado.');
+};
+
+window.renombrarPunto=async function(k){
+  const p=puntos[k]; if(!p) return;
+  const nuevo=prompt('Nuevo nombre para este punto de limpieza:',p.nombre);
+  if(nuevo===null) return;
+  const nombre=nuevo.trim();
+  if(!nombre) return showToast('El nombre no puede estar vacío.','err');
+  await update(ref(db,`ins/puntos/${k}`),{nombre});
+  // Sincronizar también el nombre propio dentro de la bodega del punto (si ya existe)
+  try{ await set(ref(db,`${p.root}/config/nombreBodega`),nombre); }catch(e){}
+  showToast('✓ Punto renombrado.');
+};
+
+// ── VER BODEGAS (visor de lectura, sin salir de San Felipe) ─────────────────────
+async function fetchBodegaData(root){
+  if(bodegaDataCache[root]) return bodegaDataCache[root];
+  const [artsSnap,catsSnap,logSnap]=await Promise.all([
+    get(ref(db,`${root}/arts`)), get(ref(db,`${root}/cats`)), get(ref(db,`${root}/log`))
+  ]);
+  const data={arts:artsSnap.val()||{}, cats:catsSnap.val()||{}, log:logSnap.val()||{}, existe:artsSnap.exists()||catsSnap.exists()};
+  bodegaDataCache[root]=data;
+  return data;
+}
+
+window.actualizarVerBodegas=function(){ bodegaDataCache={}; renderVerBodegas(); };
+
+window.toggleVerBodega=async function(key){
+  bodegasExpandidas[key]=!bodegasExpandidas[key];
+  await renderVerBodegas();
+};
+
+function construirFilaBodega(key,nombre,artsData,catsData,logDataX,color,dataOk){
+  const eqArr=Object.values(artsData);
+  const disp=+eqArr.reduce((a,e)=>a+(e.total-e.enUso),0).toFixed(2);
+  const low=eqArr.filter(e=>(e.total-e.enUso)<=e.minimo).length;
+  const expanded=!!bodegasExpandidas[key];
+  let detalle='';
+  if(expanded){
+    if(!dataOk){
+      detalle=`<div class="empty" style="padding:14px;">⚠ Esta bodega todavía no tiene datos (su página aún no se ha abierto, o el identificador "root" no coincide).</div>`;
+    } else {
+      const groups={};
+      Object.entries(artsData).forEach(([k2,a])=>{ const cid=a.catId||'__none__'; if(!groups[cid]) groups[cid]=[]; groups[cid].push(a); });
+      let catsHtml='';
+      Object.entries(catsData).forEach(([cid,cat])=>{
+        const items=groups[cid]||[]; if(!items.length) return;
+        catsHtml+=`<div style="margin-bottom:10px;"><div style="font-weight:700;font-size:12px;color:${cat.color};margin-bottom:4px;">${cat.nombre}</div>`;
+        items.forEach(a=>{
+          const d2=+(a.total-a.enUso).toFixed(2); const isLow=d2<=a.minimo;
+          catsHtml+=`<div style="font-size:12.5px;padding:3px 0;display:flex;justify-content:space-between;gap:8px;"><span>${a.nombre}${isLow?' <span class="low-badge">Bajo</span>':''}</span><span style="color:${isLow?'var(--red)':'var(--text-m)'};white-space:nowrap;">${d2} ${a.unidad||'u'}</span></div>`;
+        });
+        catsHtml+='</div>';
+      });
+      if(groups['__none__']?.length){
+        catsHtml+=`<div style="margin-bottom:10px;"><div style="font-weight:700;font-size:12px;color:#9CA3AF;margin-bottom:4px;">Sin categoría</div>`;
+        groups['__none__'].forEach(a=>{ const d2=+(a.total-a.enUso).toFixed(2); catsHtml+=`<div style="font-size:12.5px;padding:3px 0;display:flex;justify-content:space-between;gap:8px;"><span>${a.nombre}</span><span style="color:var(--text-m);white-space:nowrap;">${d2} ${a.unidad||'u'}</span></div>`; });
+        catsHtml+='</div>';
+      }
+      const recientes=Object.values(logDataX).sort((a,b)=>b.ts-a.ts).slice(0,6);
+      const movsHtml=recientes.length?recientes.map(r=>`<div style="font-size:12px;padding:4px 0;border-bottom:1px solid #F3F4F6;color:var(--text);"><b>${r.itemNombre}</b> ×${r.qty} ${r.unidad||''} <span style="color:var(--text-m);">· ${r.tipo} · ${r.fecha}</span></div>`).join(''):'<div class="empty" style="padding:6px 0;">Sin movimientos.</div>';
+      detalle=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:14px;background:#FAFAFA;border-top:1px solid var(--border);">
+        <div><div style="font-weight:700;font-size:11px;text-transform:uppercase;color:var(--text-m);margin-bottom:8px;letter-spacing:.04em;">Insumos por categoría</div>${catsHtml||'<div class="empty">Sin insumos.</div>'}</div>
+        <div><div style="font-weight:700;font-size:11px;text-transform:uppercase;color:var(--text-m);margin-bottom:8px;letter-spacing:.04em;">Últimos movimientos</div>${movsHtml}</div>
+      </div>`;
+    }
+  }
+  return `<div class="art-item" style="flex-direction:column;align-items:stretch;padding:0;">
+    <div style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:11px 14px;" onclick="toggleVerBodega('${key}')">
+      <div class="art-item-dot" style="background:${color}"></div>
+      <div class="art-item-info">
+        <div class="art-item-name">${nombre}</div>
+        <div class="art-item-meta">${eqArr.length} insumo(s) · Disponible: ${disp} · Stock bajo: ${low}</div>
+      </div>
+      <span style="font-size:16px;color:var(--text-m);">${expanded?'▲':'▼'}</span>
+    </div>
+    ${detalle}
+  </div>`;
+}
+
+window.renderVerBodegas=async function(){
+  const list=document.getElementById('ver-bodegas-list');
+  if(!list) return;
+  list.innerHTML='<div class="empty">Cargando...</div>';
+  let html=construirFilaBodega('__local__','🏭 '+nombreBodega+' (esta bodega)',arts,cats,logData,'#2563EB',true);
+  for(const [k,p] of Object.entries(puntos)){
+    let dataOk=true, dArts={}, dCats={}, dLog={};
+    try{
+      const d=await fetchBodegaData(p.root);
+      dArts=d.arts; dCats=d.cats; dLog=d.log; dataOk=!!d.existe;
+    }catch(e){ dataOk=false; }
+    html+=construirFilaBodega(k,'🏥 '+p.nombre,dArts,dCats,dLog,dataOk?'#7C3AED':'#9CA3AF',dataOk);
+  }
+  list.innerHTML=html;
+};
+
+window.renderBodegas=async function(){
+  const list=document.getElementById('bodegas-list');
+  if(!list) return;
+  list.innerHTML='<div class="empty">Cargando...</div>';
+
+  // Nombre editable de esta bodega (San Felipe)
+  let html=`<div class="add-form" style="background:#EFF6FF;border-color:#2563EB;margin-bottom:14px;">
+    <div class="add-form-title" style="color:#2563EB;">✏️ Nombre de esta bodega</div>
+    <div class="add-row">
+      <div class="form-group"><input type="text" id="nombre-bodega-input" value="${nombreBodega}" placeholder="Ej: San Felipe (Base)"></div>
+      <div class="form-group" style="max-width:130px"><button class="btn-primary btn-blue" style="padding:9px;" onclick="guardarNombreBodega()">Guardar</button></div>
+    </div>
+  </div>`;
+
+  // Tarjeta de San Felipe (bodega central, datos ya en memoria)
+  const eqArr=Object.values(arts);
+  const dispSF=+eqArr.reduce((a,e)=>a+(e.total-e.enUso),0).toFixed(2);
+  const lowSF=eqArr.filter(e=>(e.total-e.enUso)<=e.minimo).length;
+  html+=`<div class="art-item">
+    <div class="art-item-dot" style="background:#2563EB"></div>
+    <div class="art-item-info">
+      <div class="art-item-name">🏭 ${nombreBodega} <span style="font-weight:400;color:var(--text-m);">(esta bodega)</span></div>
+      <div class="art-item-meta">${eqArr.length} insumo(s) · Disponible: ${dispSF} · Stock bajo: ${lowSF}</div>
+    </div>
+  </div>`;
+
+  // Tarjetas de cada punto registrado (se consulta en vivo con get())
+  const entries=Object.entries(puntos);
+  for(const [k,p] of entries){
+    let metaTxt='Cargando...';
+    let color='#7C3AED';
+    try{
+      const snap=await get(ref(db,`${p.root}/arts`));
+      const pArts=Object.values(snap.val()||{});
+      if(!snap.exists()){
+        metaTxt='⚠ Esta bodega todavía no tiene datos (su página aún no se ha abierto o el identificador no coincide).';
+        color='#9CA3AF';
+      } else {
+        const disp=+pArts.reduce((a,e)=>a+(e.total-e.enUso),0).toFixed(2);
+        const low=pArts.filter(e=>(e.total-e.enUso)<=e.minimo).length;
+        metaTxt=`${pArts.length} insumo(s) · Disponible: ${disp} · Stock bajo: ${low}`;
+      }
+    }catch(e){ metaTxt='Error al leer esta bodega.'; color='#DC2626'; }
+    html+=`<div class="art-item" id="punto-${k}">
+      <div class="art-item-dot" style="background:${color}"></div>
+      <div class="art-item-info">
+        <div class="art-item-name">🏥 ${p.nombre}</div>
+        <div class="art-item-meta">${metaTxt} · root: <code>${p.root}</code></div>
+      </div>
+      <button class="btn-sm btn-edit" onclick="renombrarPunto('${k}')">✏️ Renombrar</button>
+      <button class="btn-sm btn-del" onclick="delPunto('${k}')">Quitar</button>
+    </div>`;
+  }
+  if(!entries.length) html+='<div class="empty">Aún no hay puntos de limpieza registrados.</div>';
+  list.innerHTML=html;
+};
+
+// ── COLOR PICKER ───────────────────────────────────────────────────────────────
+window.selectColor=function(el){
+  document.querySelectorAll('#color-picker .color-opt').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected'); selColor=el.dataset.color;
+};
+
+// ── EXCEL ──────────────────────────────────────────────────────────────────────
+window.exportarExcel=function(){
+  const wb=XLSX.utils.book_new();
+  // Stock
+  const stockRows=[['Categoría','Insumo','Unidad','Total','En uso','Disponible','Stock mínimo','Estado']];
+  Object.entries(cats).forEach(([cid,cat])=>{
+    Object.entries(arts).filter(([k,a])=>a.catId===cid).forEach(([k,a])=>{
+      const disp=+(a.total-a.enUso).toFixed(2);
+      stockRows.push([cat.nombre,a.nombre,a.unidad||'u',a.total,a.enUso,disp,a.minimo,disp<=a.minimo?'⚠ Stock bajo':'OK']);
+    });
+  });
+  Object.entries(arts).filter(([k,a])=>!a.catId).forEach(([k,a])=>{
+    const disp=+(a.total-a.enUso).toFixed(2);
+    stockRows.push(['Sin categoría',a.nombre,a.unidad||'u',a.total,a.enUso,disp,a.minimo,disp<=a.minimo?'⚠ Stock bajo':'OK']);
+  });
+  const ws1=XLSX.utils.aoa_to_sheet(stockRows);
+  ws1['!cols']=[{wch:20},{wch:26},{wch:10},{wch:10},{wch:10},{wch:12},{wch:14},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,ws1,'Stock');
+  // Historial
+  const logRows=[['Fecha','Tipo','Insumo','Cantidad','Unidad','Responsable / Proveedor','Área','Motivo / Estado','Factura','Vencimiento','Observación']];
+  Object.values(logData).sort((a,b)=>b.ts-a.ts).forEach(r=>{
+    logRows.push([r.fecha,r.tipo==='salida'?'Salida':r.tipo==='compra'?'Compra':r.tipo==='traslado'?'Transferencia enviada':r.tipo==='devolucion_recibida'?'Devolución recibida':'Entrada',r.itemNombre,r.qty,r.unidad||'',r.resp||r.proveedor||'',r.areaNombre||'',r.motivoNombre||r.estado||'',r.factura||'',r.caducidad||'',r.obs||'']);
+  });
+  const ws2=XLSX.utils.aoa_to_sheet(logRows);
+  ws2['!cols']=[{wch:18},{wch:12},{wch:24},{wch:10},{wch:10},{wch:22},{wch:16},{wch:20},{wch:14},{wch:14},{wch:24}];
+  XLSX.utils.book_append_sheet(wb,ws2,'Historial');
+  const fecha=new Date().toLocaleDateString('es-EC').replace(/\//g,'-');
+  XLSX.writeFile(wb,`Insumos_Limpieza_${fecha}.xlsx`);
+  showToast('✓ Excel descargado.');
+};
+
+// ── UTILS ──────────────────────────────────────────────────────────────────────
+function now(){ return new Date().toLocaleString('es-EC',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
+function mesKey(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+
+// ── START ──────────────────────────────────────────────────────────────────────
+await seedIfEmpty();
+startListeners();
+</script>
+</body>
+</html>
