@@ -584,6 +584,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);box-shadow:0 0 0
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getDatabase, ref, push, onValue, update, remove, get, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyC_w0ztVN2lBjg-9Scl7Pn4HA5BpCwpTls",
@@ -596,6 +597,7 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db  = getDatabase(app);
+const auth = getAuth(app);
 
 // ── IDENTIDAD DE ESTA BODEGA ─────────────────────────────────────────────────────
 // Este archivo es la PLANTILLA GUÍA para cualquier "bodega externa" (punto de limpieza).
@@ -1334,8 +1336,15 @@ function now(){ return new Date().toLocaleString('es-EC',{day:'2-digit',month:'2
 function mesKey(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
 
 // ── START ──────────────────────────────────────────────────────────────────────
-await seedIfEmpty();
-startListeners();
+try{
+  await signInAnonymously(auth);
+  await seedIfEmpty();
+  startListeners();
+}catch(e){
+  console.error('Error de autenticación con Firebase:', e);
+  const lsEl=document.getElementById('ls');
+  if(lsEl) lsEl.innerHTML='<div class="spin"></div><p>No se pudo verificar el acceso a la base de datos.<br>Contacta al administrador del sistema.</p>';
+}
 </script>
 </body>
 </html>
