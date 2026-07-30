@@ -289,6 +289,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);box-shadow:0 0 0
     <button class="nav-btn" onclick="showTab('devolucion');closeMobNav()"><span class="nav-icon">↩️</span>Devolución a San Felipe</button>
     <button class="nav-btn" onclick="showTab('historial');closeMobNav()"><span class="nav-icon">📋</span>Historial</button>
     <button class="nav-btn" onclick="showTab('consumo');closeMobNav()"><span class="nav-icon">📈</span>Consumo</button>
+    <button class="nav-btn" onclick="showTab('porarea');closeMobNav()"><span class="nav-icon">🏢</span>Por área</button>
     <button class="nav-btn" onclick="showTab('config');closeMobNav()"><span class="nav-icon">⚙️</span>Configuración</button>
     <div style="padding:14px;border-top:1px solid rgba(255,255,255,.08);margin-top:auto;">
       <span class="sync-dot" id="sd-m"></span><span class="sync-lbl" id="sl-m">Conectando...</span>
@@ -314,6 +315,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);box-shadow:0 0 0
       <button class="nav-btn" id="nav-historial" onclick="showTab('historial')"><span class="nav-icon">📋</span>Historial</button>
       <div class="nav-section">Análisis</div>
       <button class="nav-btn" id="nav-consumo"  onclick="showTab('consumo')"> <span class="nav-icon">📈</span>Consumo mensual</button>
+      <button class="nav-btn" id="nav-porarea"  onclick="showTab('porarea')"> <span class="nav-icon">🏢</span>Por área</button>
       <div class="nav-section">Configuración</div>
       <button class="nav-btn" id="nav-config"   onclick="showTab('config')">  <span class="nav-icon">⚙️</span>Configuración</button>
     </div>
@@ -367,8 +369,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);box-shadow:0 0 0
           <div class="card-body">
             <div class="form-grid">
               <div class="form-group"><label>Categoría</label><select id="s-cat" onchange="filterByCat('s')"><option value="">Todas</option></select></div>
-              <div class="form-group"><label>Insumo</label><select id="s-item"><option value="">Seleccionar insumo...</option></select></div>
-              <div class="form-group"><label>Cantidad</label><input type="number" id="s-qty" value="1" min="0.1" step="0.1"></div>
+              <div class="form-group"><label>Insumo</label><select id="s-item" onchange="actualizarSelectorUnidad('s-item','s-unit')"><option value="">Seleccionar insumo...</option></select></div>
+              <div class="form-group"><label>Cantidad</label><div style="display:flex;gap:6px;"><input type="number" id="s-qty" value="1" min="0.01" step="0.01" style="flex:1;min-width:0;"><select id="s-unit" style="width:96px;display:none;flex-shrink:0;"></select></div></div>
               <div class="form-group"><label>Responsable</label><input type="text" id="s-resp" placeholder="Nombre completo"></div>
               <div class="form-group"><label>Área de destino</label><select id="s-area"><option value="">Seleccionar área...</option></select></div>
               <div class="form-group"><label>Motivo</label><select id="s-motivo"><option value="">Seleccionar motivo...</option></select></div>
@@ -386,8 +388,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);box-shadow:0 0 0
           <div class="card-body">
             <div class="form-grid">
               <div class="form-group"><label>Categoría</label><select id="e-cat" onchange="filterByCat('e')"><option value="">Todas</option></select></div>
-              <div class="form-group"><label>Insumo</label><select id="e-item"><option value="">Seleccionar insumo...</option></select></div>
-              <div class="form-group"><label>Cantidad</label><input type="number" id="e-qty" value="1" min="0.1" step="0.1"></div>
+              <div class="form-group"><label>Insumo</label><select id="e-item" onchange="actualizarSelectorUnidad('e-item','e-unit')"><option value="">Seleccionar insumo...</option></select></div>
+              <div class="form-group"><label>Cantidad</label><div style="display:flex;gap:6px;"><input type="number" id="e-qty" value="1" min="0.01" step="0.01" style="flex:1;min-width:0;"><select id="e-unit" style="width:96px;display:none;flex-shrink:0;"></select></div></div>
               <div class="form-group"><label>Responsable</label><input type="text" id="e-resp" placeholder="Nombre completo"></div>
               <div class="form-group"><label>Estado</label><select id="e-estado"><option>Completo / Sin abrir</option><option>Parcialmente usado</option><option>Casi vacío</option><option>Dañado / Dar de baja</option></select></div>
               <div class="form-group form-full"><label>Observación (opcional)</label><input type="text" id="e-obs" placeholder="Estado del insumo, novedades..."></div>
@@ -404,8 +406,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);box-shadow:0 0 0
           <div class="card-body">
             <div class="form-grid">
               <div class="form-group"><label>Categoría</label><select id="c-cat" onchange="filterByCat('c')"><option value="">Todas</option></select></div>
-              <div class="form-group"><label>Insumo</label><select id="c-item"><option value="">Seleccionar insumo...</option></select></div>
-              <div class="form-group"><label>Cantidad recibida</label><input type="number" id="c-qty" value="1" min="0.1" step="0.1"></div>
+              <div class="form-group"><label>Insumo</label><select id="c-item" onchange="actualizarSelectorUnidad('c-item','c-unit')"><option value="">Seleccionar insumo...</option></select></div>
+              <div class="form-group"><label>Cantidad recibida</label><div style="display:flex;gap:6px;"><input type="number" id="c-qty" value="1" min="0.01" step="0.01" style="flex:1;min-width:0;"><select id="c-unit" style="width:96px;display:none;flex-shrink:0;"></select></div></div>
               <div class="form-group"><label>Proveedor</label><input type="text" id="c-proveedor" placeholder="Nombre del proveedor"></div>
               <div class="form-group"><label>N° Factura / Referencia</label><input type="text" id="c-factura" placeholder="Ej: FAC-0012345"></div>
               <div class="form-group"><label>Fecha de caducidad (opcional)</label><input type="date" id="c-caducidad"></div>
@@ -423,8 +425,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);box-shadow:0 0 0
           <div class="card-body">
             <div class="form-grid">
               <div class="form-group"><label>Categoría</label><select id="d-cat" onchange="filterByCat('d')"><option value="">Todas</option></select></div>
-              <div class="form-group"><label>Insumo</label><select id="d-item"><option value="">Seleccionar insumo...</option></select></div>
-              <div class="form-group"><label>Cantidad a devolver</label><input type="number" id="d-qty" value="1" min="0.1" step="0.1"></div>
+              <div class="form-group"><label>Insumo</label><select id="d-item" onchange="actualizarSelectorUnidad('d-item','d-unit')"><option value="">Seleccionar insumo...</option></select></div>
+              <div class="form-group"><label>Cantidad a devolver</label><div style="display:flex;gap:6px;"><input type="number" id="d-qty" value="1" min="0.01" step="0.01" style="flex:1;min-width:0;"><select id="d-unit" style="width:96px;display:none;flex-shrink:0;"></select></div></div>
               <div class="form-group"><label>Responsable</label><input type="text" id="d-resp" placeholder="Nombre completo"></div>
               <div class="form-group form-full"><label>Observación (opcional)</label><input type="text" id="d-obs" placeholder="Motivo de la devolución, novedades..."></div>
             </div>
@@ -471,6 +473,20 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);box-shadow:0 0 0
           <div class="card-head">🏢 Consumo por área</div>
           <div id="consumo-areas" style="padding:14px 18px;"></div>
         </div>
+      </div>
+
+      <!-- POR ÁREA (consumo acumulado, histórico) -->
+      <div id="tab-porarea" class="section">
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+          <select id="pa-area" onchange="renderPorAreaAcum()" style="width:200px;"><option value="">Todas las áreas</option></select>
+          <div style="display:flex;gap:6px;align-items:center;font-size:13px;color:var(--text-m);">
+            <span>Desde</span><input type="date" id="pa-desde" onchange="renderPorAreaAcum()" style="width:150px;">
+            <span>Hasta</span><input type="date" id="pa-hasta" onchange="renderPorAreaAcum()" style="width:150px;">
+          </div>
+          <button class="btn-sm btn-edit" onclick="limpiarFiltroPorArea()">Todo el historial</button>
+        </div>
+        <div style="font-size:13px;color:var(--text-m);margin-bottom:14px;">Consumo acumulado (salidas menos devoluciones) de cada área, sin límite de mes — útil para ver qué zonas consumen más insumos en el tiempo.</div>
+        <div id="porarea-acum-list"><div class="empty">Cargando...</div></div>
       </div>
 
       <!-- CONFIGURACIÓN -->
@@ -670,13 +686,13 @@ function startListeners(){
   onValue(ref(db,`${MI_ROOT}/config/adminPassword`),s=>{ if(s.exists()) adminPw=s.val(); });
   onValue(ref(db,`${MI_ROOT}/config/nombreBodega`),s=>{ if(s.exists()){ nombreBodega=s.val(); aplicarNombreBodega(); } });
   onValue(ref(db,`${MI_ROOT}/cats`),s=>{ cats=s.val()||{}; refreshAll(); });
-  onValue(ref(db,`${MI_ROOT}/areas`),s=>{ areas=s.val()||{}; refreshAll(); });
+  onValue(ref(db,`${MI_ROOT}/areas`),s=>{ areas=s.val()||{}; refreshAll(); if(currentTab==='porarea'){ poblarSelectPorArea(); renderPorAreaAcum(); } });
   onValue(ref(db,`${MI_ROOT}/motivos`),s=>{ motivos=s.val()||{}; refreshAll(); });
   onValue(ref(db,`${MI_ROOT}/arts`),s=>{
     arts=s.val()||{}; refreshAll();
     if(!ready){ ready=true; document.getElementById('ls').style.opacity='0'; setTimeout(()=>document.getElementById('ls').style.display='none',400); setSyncBadge(true); }
   });
-  onValue(ref(db,`${MI_ROOT}/log`),s=>{ logData=s.val()||{}; if(currentTab==='dashboard') renderDashboard(); if(currentTab==='historial') renderHistorial(); if(currentTab==='consumo') renderConsumo(); });
+  onValue(ref(db,`${MI_ROOT}/log`),s=>{ logData=s.val()||{}; if(currentTab==='dashboard') renderDashboard(); if(currentTab==='historial') renderHistorial(); if(currentTab==='consumo') renderConsumo(); if(currentTab==='porarea') renderPorAreaAcum(); });
 }
 
 function refreshAll(){
@@ -708,8 +724,8 @@ async function sincronizarNombreEnCentral(nombre){
 }
 
 // ── NAV ────────────────────────────────────────────────────────────────────────
-const PAGE_TITLES={dashboard:'📊 Resumen del inventario',salida:'↑ Registrar salida',entrada:'↓ Registrar devolución',compra:'📦 Registrar compra local',devolucion:'↩️ Devolución a San Felipe',historial:'📋 Historial de movimientos',consumo:'📈 Consumo mensual',config:'⚙️ Configuración'};
-const MOB_TITLES={dashboard:'Resumen',salida:'Salida',entrada:'Devolución',compra:'Compra',devolucion:'Devolver',historial:'Historial',consumo:'Consumo',config:'Configuración'};
+const PAGE_TITLES={dashboard:'📊 Resumen del inventario',salida:'↑ Registrar salida',entrada:'↓ Registrar devolución',compra:'📦 Registrar compra local',devolucion:'↩️ Devolución a San Felipe',historial:'📋 Historial de movimientos',consumo:'📈 Consumo mensual',porarea:'🏢 Consumo por área',config:'⚙️ Configuración'};
+const MOB_TITLES={dashboard:'Resumen',salida:'Salida',entrada:'Devolución',compra:'Compra',devolucion:'Devolver',historial:'Historial',consumo:'Consumo',porarea:'Por área',config:'Configuración'};
 
 window.showTab=function(id){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
@@ -722,6 +738,7 @@ window.showTab=function(id){
   if(id==='dashboard') renderDashboard();
   if(id==='historial') renderHistorial();
   if(id==='consumo') renderConsumo();
+  if(id==='porarea'){ poblarSelectPorArea(); renderPorAreaAcum(); }
   if(id==='config'){ updateAdminView(); if(isAdmin){ renderArticulos(); renderCategorias(); renderAreas(); renderMotivos(); } }
 };
 
@@ -817,10 +834,11 @@ window.filterByCat=function(prefix){
   Object.entries(arts).filter(([k,a])=>!catId||a.catId===catId).forEach(([k,a])=>{
     const disp=+(a.total-a.enUso).toFixed(2);
     const o=document.createElement('option');
-    o.value=k; o.textContent=isSalida?`${a.nombre} (${disp} ${a.unidad||'u'} disp.)`:a.nombre;
+    o.value=k; o.textContent=isSalida?`${a.nombre} (${formatCantidad(disp,a.unidad)} disp.)`:a.nombre;
     itemSel.appendChild(o);
   });
   if(cur) itemSel.value=cur;
+  actualizarSelectorUnidad(prefix+'-item',prefix+'-unit');
 };
 
 function populateConsumoMes(){
@@ -853,7 +871,7 @@ function renderDashboard(){
   const lowItems=Object.entries(arts).filter(([k,e])=>(e.total-e.enUso)<=e.minimo);
   const alertBanner=document.getElementById('alert-stock');
   const alertItems=document.getElementById('alert-items');
-  if(lowItems.length){ alertBanner.classList.add('show'); alertItems.innerHTML=lowItems.map(([k,e])=>`<div class="alert-item">• ${e.nombre}: quedan ${+(e.total-e.enUso).toFixed(2)} ${e.unidad||'u'} (mínimo: ${e.minimo})</div>`).join(''); }
+  if(lowItems.length){ alertBanner.classList.add('show'); alertItems.innerHTML=lowItems.map(([k,e])=>`<div class="alert-item">• ${e.nombre}: quedan ${formatCantidad(e.total-e.enUso,e.unidad)} (mínimo: ${formatCantidad(e.minimo,e.unidad)})</div>`).join(''); }
   else alertBanner.classList.remove('show');
 
   // Category cards
@@ -868,13 +886,13 @@ function renderDashboard(){
       const pct=a.total>0?Math.round(disp/a.total*100):0;
       const c=pct>30?'#16A34A':pct>10?'#D97706':'#DC2626';
       const isLow=(a.total-a.enUso)<=a.minimo;
-      html+=`<div class="art-row"><div class="art-name">${a.nombre}${isLow?'<span class="low-badge">Stock bajo</span>':''}</div><span class="art-unit">${a.unidad||'u'}</span><div class="art-bar-bg"><div class="art-bar-fill" style="width:${pct}%;background:${c}"></div></div><div class="art-nums" style="color:${c};font-weight:700">${disp}</div></div>`;
+      html+=`<div class="art-row"><div class="art-name">${a.nombre}${isLow?'<span class="low-badge">Stock bajo</span>':''}</div><div class="art-bar-bg"><div class="art-bar-fill" style="width:${pct}%;background:${c}"></div></div><div class="art-nums" style="color:${c};font-weight:700;min-width:auto;">${formatCantidad(disp,a.unidad)}</div></div>`;
     });
     html+='</div>';
   });
   if(groups['__none__']?.length){
     html+=`<div class="cat-card"><div class="cat-head"><div class="cat-dot" style="background:#9CA3AF"></div><div class="cat-name">Sin categoría</div><div class="cat-count">${groups['__none__'].length}</div></div>`;
-    groups['__none__'].forEach(a=>{ const disp=+(a.total-a.enUso).toFixed(2); const pct=a.total>0?Math.round(disp/a.total*100):0; const c=pct>30?'#16A34A':pct>10?'#D97706':'#DC2626'; html+=`<div class="art-row"><div class="art-name">${a.nombre}</div><span class="art-unit">${a.unidad||'u'}</span><div class="art-bar-bg"><div class="art-bar-fill" style="width:${pct}%;background:${c}"></div></div><div class="art-nums" style="color:${c};font-weight:700">${disp}</div></div>`; });
+    groups['__none__'].forEach(a=>{ const disp=+(a.total-a.enUso).toFixed(2); const pct=a.total>0?Math.round(disp/a.total*100):0; const c=pct>30?'#16A34A':pct>10?'#D97706':'#DC2626'; html+=`<div class="art-row"><div class="art-name">${a.nombre}</div><div class="art-bar-bg"><div class="art-bar-fill" style="width:${pct}%;background:${c}"></div></div><div class="art-nums" style="color:${c};font-weight:700;min-width:auto;">${formatCantidad(disp,a.unidad)}</div></div>`; });
     html+='</div>';
   }
   document.getElementById('cat-grid').innerHTML=html||'<div class="empty">Sin insumos registrados.</div>';
@@ -887,7 +905,7 @@ function renderDashboard(){
     document.getElementById('recent-list').innerHTML=recent.map(r=>`
       <div class="log-row">
         <span class="badge badge-${r.tipo}">${r.tipo==='salida'?'↑ Salida':r.tipo==='compra'?'📦 Compra':r.tipo==='traslado_recibido'?'🚚 Recibido':r.tipo==='devolucion_central'?'↩️ Devuelto':'↓ Devolución'}</span>
-        <div class="log-main"><div class="log-name">${r.itemNombre} ×${r.qty} ${r.unidad||''}</div><div class="log-sub">${r.resp||r.proveedor||''}${r.origen?' ← '+r.origen:''}${r.destino?' → '+r.destino:''} · ${r.fecha}</div></div>
+        <div class="log-main"><div class="log-name">${r.itemNombre} ×${formatCantidad(r.qty,r.unidad)}</div><div class="log-sub">${r.resp||r.proveedor||''}${r.origen?' ← '+r.origen:''}${r.destino?' → '+r.destino:''} · ${r.fecha}</div></div>
       </div>`).join('');
   } else rc.style.display='none';
 }
@@ -898,26 +916,29 @@ const spinHtml='<span style="display:inline-block;width:13px;height:13px;border:
 // ── SALIDA ─────────────────────────────────────────────────────────────────────
 window.registrarSalida=async function(){
   const itemId=document.getElementById('s-item').value;
-  const qty=parseFloat(document.getElementById('s-qty').value)||0;
+  const modoUnidad=document.getElementById('s-unit').value;
+  const qtyIngresada=parseFloat(document.getElementById('s-qty').value)||0;
   const resp=document.getElementById('s-resp').value.trim();
   const areaId=document.getElementById('s-area').value;
   const motivoId=document.getElementById('s-motivo').value;
   const obs=document.getElementById('s-obs').value.trim();
   if(!itemId) return showToast('Selecciona un insumo.','err');
-  if(!qty||qty<=0) return showToast('Ingresa una cantidad válida.','err');
+  if(!qtyIngresada||qtyIngresada<=0) return showToast('Ingresa una cantidad válida.','err');
   if(!resp) return showToast('Ingresa el nombre del responsable.','err');
   if(!areaId) return showToast('Selecciona el área de destino.','err');
   if(!motivoId) return showToast('Selecciona el motivo.','err');
   const a=arts[itemId]; const disp=+(a.total-a.enUso).toFixed(2);
-  if(qty>disp) return showToast(`Solo hay ${disp} ${a.unidad||'u'} disponibles.`,'err');
+  const qty=aUnidadBase(qtyIngresada,a.unidad,modoUnidad);
+  if(qty>disp) return showToast(`Solo hay ${formatCantidad(disp,a.unidad)} disponibles.`,'err');
   const btn=document.getElementById('btn-salida'); btn.disabled=true; btn.innerHTML=spinHtml+'Guardando...';
   try{
-    await update(ref(db,`${MI_ROOT}/arts/${itemId}`),{enUso:+(a.enUso+qty).toFixed(2)});
+    await update(ref(db,`${MI_ROOT}/arts/${itemId}`),{enUso:+(a.enUso+qty).toFixed(3)});
     const area=areas[areaId]; const motivo=motivos[motivoId];
     await push(ref(db,`${MI_ROOT}/log`),{tipo:'salida',itemId,itemNombre:a.nombre,qty,unidad:a.unidad||'u',resp,areaNombre:area?.nombre||'',motivoNombre:motivo?.nombre||'',obs,fecha:now(),ts:Date.now(),mes:mesKey()});
-    showToast('✓ Salida registrada.');
+    showToast(`✓ Salida registrada: ${formatCantidad(qty,a.unidad)}.`);
     ['s-item','s-resp','s-obs'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('s-qty').value=1;
+    actualizarSelectorUnidad('s-item','s-unit');
   }catch(e){showToast('Error al guardar.','err');}
   btn.disabled=false; btn.innerHTML='↑ Registrar salida';
 };
@@ -933,13 +954,15 @@ window.registrarEntrada=async function(){
   if(!qty||qty<=0) return showToast('Ingresa una cantidad válida.','err');
   if(!resp) return showToast('Ingresa el nombre del responsable.','err');
   const a=arts[itemId];
+  const qtyBase=aUnidadBase(qty,a.unidad,document.getElementById('e-unit').value);
   const btn=document.getElementById('btn-entrada'); btn.disabled=true; btn.innerHTML=spinHtml+'Guardando...';
   try{
-    await update(ref(db,`${MI_ROOT}/arts/${itemId}`),{enUso:Math.max(0,+(a.enUso-qty).toFixed(2))});
-    await push(ref(db,`${MI_ROOT}/log`),{tipo:'entrada',itemId,itemNombre:a.nombre,qty,unidad:a.unidad||'u',resp,estado,obs,fecha:now(),ts:Date.now(),mes:mesKey()});
-    showToast('✓ Devolución registrada.');
+    await update(ref(db,`${MI_ROOT}/arts/${itemId}`),{enUso:Math.max(0,+(a.enUso-qtyBase).toFixed(3))});
+    await push(ref(db,`${MI_ROOT}/log`),{tipo:'entrada',itemId,itemNombre:a.nombre,qty:qtyBase,unidad:a.unidad||'u',resp,estado,obs,fecha:now(),ts:Date.now(),mes:mesKey()});
+    showToast(`✓ Devolución registrada: ${formatCantidad(qtyBase,a.unidad)}.`);
     ['e-item','e-resp','e-obs'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('e-qty').value=1;
+    actualizarSelectorUnidad('e-item','e-unit');
   }catch(e){showToast('Error al guardar.','err');}
   btn.disabled=false; btn.innerHTML='↓ Registrar devolución';
 };
@@ -956,13 +979,15 @@ window.registrarCompra=async function(){
   if(!qty||qty<=0) return showToast('Ingresa una cantidad válida.','err');
   if(!proveedor) return showToast('Ingresa el nombre del proveedor.','err');
   const a=arts[itemId];
+  const qtyBase=aUnidadBase(qty,a.unidad,document.getElementById('c-unit').value);
   const btn=document.getElementById('btn-compra'); btn.disabled=true; btn.innerHTML=spinHtml+'Guardando...';
   try{
-    await update(ref(db,`${MI_ROOT}/arts/${itemId}`),{total:+(a.total+qty).toFixed(2)});
-    await push(ref(db,`${MI_ROOT}/log`),{tipo:'compra',itemId,itemNombre:a.nombre,qty,unidad:a.unidad||'u',proveedor,factura,caducidad,obs,fecha:now(),ts:Date.now(),mes:mesKey()});
-    showToast('✓ Ingreso registrado. Stock actualizado.');
+    await update(ref(db,`${MI_ROOT}/arts/${itemId}`),{total:+(a.total+qtyBase).toFixed(3)});
+    await push(ref(db,`${MI_ROOT}/log`),{tipo:'compra',itemId,itemNombre:a.nombre,qty:qtyBase,unidad:a.unidad||'u',proveedor,factura,caducidad,obs,fecha:now(),ts:Date.now(),mes:mesKey()});
+    showToast(`✓ Ingreso registrado: ${formatCantidad(qtyBase,a.unidad)}.`);
     ['c-item','c-proveedor','c-factura','c-caducidad','c-obs'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('c-qty').value=1;
+    actualizarSelectorUnidad('c-item','c-unit');
   }catch(e){showToast('Error al guardar.','err');}
   btn.disabled=false; btn.innerHTML='📦 Registrar ingreso';
 };
@@ -972,14 +997,15 @@ const CENTRAL_ROOT='ins';
 
 window.registrarDevolucionCentral=async function(){
   const itemId=document.getElementById('d-item').value;
-  const qty=parseFloat(document.getElementById('d-qty').value)||0;
+  const qtyIngresada=parseFloat(document.getElementById('d-qty').value)||0;
   const resp=document.getElementById('d-resp').value.trim();
   const obs=document.getElementById('d-obs').value.trim();
   if(!itemId) return showToast('Selecciona un insumo.','err');
-  if(!qty||qty<=0) return showToast('Ingresa una cantidad válida.','err');
+  if(!qtyIngresada||qtyIngresada<=0) return showToast('Ingresa una cantidad válida.','err');
   if(!resp) return showToast('Ingresa el nombre del responsable.','err');
   const a=arts[itemId]; const disp=+(a.total-a.enUso).toFixed(2);
-  if(qty>disp) return showToast(`Solo hay ${disp} ${a.unidad||'u'} disponibles.`,'err');
+  const qty=aUnidadBase(qtyIngresada,a.unidad,document.getElementById('d-unit').value);
+  if(qty>disp) return showToast(`Solo hay ${formatCantidad(disp,a.unidad)} disponibles.`,'err');
 
   const btn=document.getElementById('btn-devolucion'); btn.disabled=true; btn.innerHTML=spinHtml+'Enviando...';
   try{
@@ -996,14 +1022,14 @@ window.registrarDevolucionCentral=async function(){
     const fechaMov=now(), tsMov=Date.now(), mesMov=mesKey();
 
     // 2. Descontar definitivamente de esta bodega (sale hacia San Felipe)
-    updates[`${MI_ROOT}/arts/${itemId}/total`]=+(a.total-qty).toFixed(2);
+    updates[`${MI_ROOT}/arts/${itemId}/total`]=+(a.total-qty).toFixed(3);
     const logAquiKey=push(ref(db,`${MI_ROOT}/log`)).key;
     updates[`${MI_ROOT}/log/${logAquiKey}`]={tipo:'devolucion_central',itemId,itemNombre:a.nombre,qty,unidad:a.unidad||'u',resp,destino:sfNombre,obs,fecha:fechaMov,ts:tsMov,mes:mesMov};
 
     // 3. Sumar en San Felipe (crear el insumo y su categoría si no existen)
     if(sfItemId){
       const d=sfArts[sfItemId];
-      updates[`${CENTRAL_ROOT}/arts/${sfItemId}/total`]=+(d.total+qty).toFixed(2);
+      updates[`${CENTRAL_ROOT}/arts/${sfItemId}/total`]=+(d.total+qty).toFixed(3);
     } else {
       sfItemId=push(ref(db,`${CENTRAL_ROOT}/arts`)).key;
       let sfCatId='';
@@ -1026,9 +1052,10 @@ window.registrarDevolucionCentral=async function(){
 
     // 4. Guardar todo en una sola operación atómica (ambas bodegas o ninguna)
     await update(ref(db),updates);
-    showToast(`✓ ${qty} ${a.unidad||'u'} de ${a.nombre} devuelto(s) a ${sfNombre}.`);
+    showToast(`✓ ${formatCantidad(qty,a.unidad)} de ${a.nombre} devuelto(s) a ${sfNombre}.`);
     ['d-item','d-resp','d-obs'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('d-qty').value=1;
+    actualizarSelectorUnidad('d-item','d-unit');
   }catch(e){ console.error(e); showToast('Error al registrar la devolución.','err'); }
   btn.disabled=false; btn.innerHTML='↩️ Enviar devolución a San Felipe';
 };
@@ -1046,7 +1073,7 @@ window.renderHistorial=function(){
     <div class="log-row">
       <span class="badge badge-${r.tipo}">${badgeLbl(r)}</span>
       <div class="log-main">
-        <div class="log-name">${r.itemNombre} <span style="font-weight:400;color:var(--text-m)">×${r.qty} ${r.unidad||''}</span></div>
+        <div class="log-name">${r.itemNombre} <span style="font-weight:400;color:var(--text-m)">×${formatCantidad(r.qty,r.unidad)}</span></div>
         <div class="log-sub">${r.tipo==='compra'?(r.proveedor||'')+(r.factura?' · '+r.factura:''):(r.resp||'')}${r.areaNombre?' → '+r.areaNombre:''}${r.origen?' ← '+r.origen:''}${r.destino?' → '+r.destino:''}${r.motivoNombre?' · '+r.motivoNombre:''}${r.estado?' · '+r.estado:''}${r.obs?' · '+r.obs:''}</div>
         <div class="log-sub">${r.fecha}${r.caducidad?' · Vence: '+r.caducidad:''}</div>
       </div>
@@ -1067,14 +1094,14 @@ window.renderConsumo=function(){
 
   // Top insumos
   const byArt={};
-  salidas.forEach(r=>{ byArt[r.itemNombre]=(byArt[r.itemNombre]||0)+r.qty; });
-  const sortedArt=Object.entries(byArt).sort((a,b)=>b[1]-a[1]).slice(0,8);
-  const maxArt=sortedArt[0]?.[1]||1;
-  document.getElementById('consumo-bars').innerHTML=sortedArt.length?sortedArt.map(([name,val])=>`
+  salidas.forEach(r=>{ if(!byArt[r.itemNombre]) byArt[r.itemNombre]={qty:0,unidad:r.unidad}; byArt[r.itemNombre].qty+=r.qty; });
+  const sortedArt=Object.entries(byArt).sort((a,b)=>b[1].qty-a[1].qty).slice(0,8);
+  const maxArt=sortedArt[0]?.[1].qty||1;
+  document.getElementById('consumo-bars').innerHTML=sortedArt.length?sortedArt.map(([name,d])=>`
     <div class="consumo-bar">
       <div class="consumo-name">${name}</div>
-      <div class="consumo-track"><div class="consumo-fill" style="width:${Math.round(val/maxArt*100)}%"></div></div>
-      <div class="consumo-val">${+val.toFixed(2)}</div>
+      <div class="consumo-track"><div class="consumo-fill" style="width:${Math.round(d.qty/maxArt*100)}%"></div></div>
+      <div class="consumo-val">${formatCantidad(d.qty,d.unidad)}</div>
     </div>`).join(''):'<div class="empty">Sin salidas en este período.</div>';
 
   // Por área
@@ -1090,6 +1117,59 @@ window.renderConsumo=function(){
     </div>`).join(''):'<div class="empty">Sin datos para este período.</div>';
 };
 
+// ── POR ÁREA (consumo acumulado, sin límite de mes) ─────────────────────────────
+window.poblarSelectPorArea=function(){
+  const sel=document.getElementById('pa-area'); if(!sel) return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">Todas las áreas</option>';
+  Object.entries(areas).forEach(([k,a])=>{ const o=document.createElement('option'); o.value=k; o.textContent=a.nombre; sel.appendChild(o); });
+  if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
+};
+
+window.limpiarFiltroPorArea=function(){
+  document.getElementById('pa-area').value='';
+  document.getElementById('pa-desde').value='';
+  document.getElementById('pa-hasta').value='';
+  renderPorAreaAcum();
+};
+
+window.renderPorAreaAcum=function(){
+  const list=document.getElementById('porarea-acum-list');
+  if(!list) return;
+  const areaFiltro=document.getElementById('pa-area')?.value||'';
+  const desde=document.getElementById('pa-desde')?.value;
+  const hasta=document.getElementById('pa-hasta')?.value;
+  const tsDesde=desde?new Date(desde+'T00:00:00').getTime():null;
+  const tsHasta=hasta?new Date(hasta+'T23:59:59').getTime():null;
+  const areaSel=areaFiltro?areas[areaFiltro]:null;
+
+  const net={};
+  Object.values(logData).forEach(r=>{
+    if(r.tipo!=='salida'&&r.tipo!=='entrada') return;
+    if(!r.areaNombre) return;
+    if(areaSel&&r.areaNombre!==areaSel.nombre) return;
+    if(tsDesde&&r.ts<tsDesde) return;
+    if(tsHasta&&r.ts>tsHasta) return;
+    if(!net[r.areaNombre]) net[r.areaNombre]={};
+    if(!net[r.areaNombre][r.itemNombre]) net[r.areaNombre][r.itemNombre]={qty:0,unidad:r.unidad};
+    net[r.areaNombre][r.itemNombre].qty+=(r.tipo==='salida'?r.qty:-r.qty);
+  });
+
+  const areaNames=Object.keys(net).sort((a,b)=>a.localeCompare(b,'es'));
+  const bloques=areaNames.map(areaName=>{
+    const items=Object.entries(net[areaName]).filter(([k,d])=>d.qty>0.001).sort((a,b)=>b[1].qty-a[1].qty);
+    if(!items.length) return '';
+    return `<div class="card">
+      <div class="card-head" style="background:var(--blue-light);color:var(--blue);">🏢 ${areaName} <span style="font-weight:400;color:var(--text-m);">· ${items.length} insumo(s)</span></div>
+      <div style="padding:2px 18px;">
+        ${items.map(([name,d])=>`<div class="log-row" style="border-bottom:1px solid var(--border);"><div class="log-main"><div class="log-name">${name}</div></div><div style="font-weight:700;color:var(--blue);white-space:nowrap;">${formatCantidad(d.qty,d.unidad)}</div></div>`).join('')}
+      </div>
+    </div>`;
+  }).filter(Boolean);
+
+  list.innerHTML=bloques.length?bloques.join(''):'<div class="empty">No hay consumo registrado en este período.</div>';
+};
+
 // ── ARTICULOS ──────────────────────────────────────────────────────────────────
 window.renderArticulos=function(){
   const entries=Object.entries(arts);
@@ -1101,7 +1181,7 @@ window.renderArticulos=function(){
       <div class="art-item-dot" style="background:${cat?.color||'#9CA3AF'}"></div>
       <div class="art-item-info">
         <div class="art-item-name">${a.nombre}${isLow?'<span class="low-badge">Stock bajo</span>':''}</div>
-        <div class="art-item-meta">${cat?.nombre||'Sin cat.'} · ${a.unidad||'u'} · Total: ${a.total} · En uso: ${a.enUso} · Disp: <b style="color:${isLow?'var(--red)':'var(--green)'}">${disp}</b> · Mín: ${a.minimo}</div>
+        <div class="art-item-meta">${cat?.nombre||'Sin cat.'} · Total: ${formatCantidad(a.total,a.unidad)} · En uso: ${formatCantidad(a.enUso,a.unidad)} · Disp: <b style="color:${isLow?'var(--red)':'var(--green)'}">${formatCantidad(disp,a.unidad)}</b> · Mín: ${formatCantidad(a.minimo,a.unidad)}</div>
       </div>
       <button class="btn-sm btn-edit" onclick="editArt('${k}')">Editar</button>
       <button class="btn-sm btn-del" onclick="delArt('${k}')">Eliminar</button>
@@ -1332,6 +1412,44 @@ window.exportarExcel=function(){
 };
 
 // ── UTILS ──────────────────────────────────────────────────────────────────────
+// ── UNIDADES CON SUBUNIDAD (conversión y formato "19 litros y 750 ml") ─────────
+const UNIT_SUB={
+  'litros':{sub:'ml',factor:1000},
+  'kilogramos':{sub:'gramos',factor:1000},
+  'kilos':{sub:'gramos',factor:1000},
+};
+function unitInfo(unidad){ return UNIT_SUB[(unidad||'').trim().toLowerCase()]||null; }
+
+function aUnidadBase(valor,unidad,modo){
+  const info=unitInfo(unidad);
+  if(!info||modo!=='sub') return valor;
+  return Math.round((valor/info.factor)*1000)/1000;
+}
+
+function formatCantidad(qty,unidad){
+  const info=unitInfo(unidad);
+  const u=unidad||'u';
+  if(!info) return `${+(+qty).toFixed(2)} ${u}`;
+  const q=Math.round(qty*info.factor)/info.factor;
+  const whole=Math.floor(q+1e-9);
+  let sub=Math.round((q-whole)*info.factor);
+  if(sub>=info.factor){ return `${whole+1} ${u}`; }
+  if(sub<=0) return `${whole} ${u}`;
+  if(whole<=0) return `${sub} ${info.sub}`;
+  return `${whole} ${u} y ${sub} ${info.sub}`;
+}
+
+function actualizarSelectorUnidad(selectItemId,selectUnitId){
+  const itemSel=document.getElementById(selectItemId);
+  const unitSel=document.getElementById(selectUnitId);
+  if(!itemSel||!unitSel) return;
+  const a=arts[itemSel.value];
+  const info=a?unitInfo(a.unidad):null;
+  if(!info){ unitSel.style.display='none'; unitSel.innerHTML=''; return; }
+  unitSel.innerHTML=`<option value="base">${a.unidad}</option><option value="sub">${info.sub}</option>`;
+  unitSel.style.display='';
+}
+
 function now(){ return new Date().toLocaleString('es-EC',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
 function mesKey(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
 
