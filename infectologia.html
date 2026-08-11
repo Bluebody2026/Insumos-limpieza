@@ -466,11 +466,11 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);box-shadow:0 0 0
           <div class="metric"><div class="metric-icon">🔄</div><div class="metric-lbl">Devoluciones</div><div class="metric-val" id="c-devol" style="color:var(--green)">—</div></div>
         </div>
         <div class="card">
-          <div class="card-head">📊 Insumos más consumidos</div>
+          <div class="card-head">📊 Total consumido por insumo (para reabastecer)</div>
           <div id="consumo-bars" style="padding:14px 18px;"></div>
         </div>
         <div class="card">
-          <div class="card-head">🏢 Consumo por área</div>
+          <div class="card-head">🏢 Consumo por área <span style="font-weight:400;font-size:12px;color:var(--text-m);">— por cantidad de salidas registradas, no de unidades (mezclan litros, rollos, unidades, etc.)</span></div>
           <div id="consumo-areas" style="padding:14px 18px;"></div>
         </div>
       </div>
@@ -1092,28 +1092,32 @@ window.renderConsumo=function(){
   document.getElementById('c-compras').textContent=+compras.reduce((a,r)=>a+r.qty,0).toFixed(2);
   document.getElementById('c-devol').textContent=+devols.reduce((a,r)=>a+r.qty,0).toFixed(2);
 
-  // Top insumos
+  // Total consumido por insumo (todos, no solo los más altos) — para saber cuánto reabastecer
   const byArt={};
   salidas.forEach(r=>{ if(!byArt[r.itemNombre]) byArt[r.itemNombre]={qty:0,unidad:r.unidad}; byArt[r.itemNombre].qty+=r.qty; });
-  const sortedArt=Object.entries(byArt).sort((a,b)=>b[1].qty-a[1].qty).slice(0,8);
-  const maxArt=sortedArt[0]?.[1].qty||1;
-  document.getElementById('consumo-bars').innerHTML=sortedArt.length?sortedArt.map(([name,d])=>`
-    <div class="consumo-bar">
-      <div class="consumo-name">${name}</div>
-      <div class="consumo-track"><div class="consumo-fill" style="width:${Math.round(d.qty/maxArt*100)}%"></div></div>
-      <div class="consumo-val">${formatCantidad(d.qty,d.unidad)}</div>
-    </div>`).join(''):'<div class="empty">Sin salidas en este período.</div>';
+  const sortedArt=Object.entries(byArt).sort((a,b)=>b[1].qty-a[1].qty);
+  document.getElementById('consumo-bars').innerHTML=sortedArt.length?`
+    <div style="display:flex;justify-content:space-between;padding:8px 18px;font-size:11px;font-weight:700;color:var(--text-m);text-transform:uppercase;border-bottom:1px solid var(--border);">
+      <span>Insumo</span><span>Total consumido en el mes</span>
+    </div>
+    ${sortedArt.map(([name,d])=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 18px;border-bottom:1px solid #F9FAFB;">
+        <span style="font-size:13.5px;color:var(--text);">${name}</span>
+        <span style="font-size:13.5px;font-weight:700;color:var(--blue);white-space:nowrap;">${formatCantidad(d.qty,d.unidad)}</span>
+      </div>`).join('')}
+  `:'<div class="empty">Sin salidas en este período.</div>';
 
-  // Por área
+  // Por área — se cuenta la cantidad de salidas registradas (no se suman las cantidades,
+  // porque cada salida puede ser de un insumo con una unidad distinta: litros, rollos, unidades...)
   const byArea={};
-  salidas.forEach(r=>{ const an=r.areaNombre||'Sin área'; byArea[an]=(byArea[an]||0)+r.qty; });
+  salidas.forEach(r=>{ const an=r.areaNombre||'Sin área'; byArea[an]=(byArea[an]||0)+1; });
   const sortedArea=Object.entries(byArea).sort((a,b)=>b[1]-a[1]);
   const maxArea=sortedArea[0]?.[1]||1;
   document.getElementById('consumo-areas').innerHTML=sortedArea.length?sortedArea.map(([name,val])=>`
     <div class="consumo-bar">
       <div class="consumo-name">${name}</div>
       <div class="consumo-track"><div class="consumo-fill" style="width:${Math.round(val/maxArea*100)}%;background:#7C3AED"></div></div>
-      <div class="consumo-val">${+val.toFixed(2)}</div>
+      <div class="consumo-val">${val} salida${val===1?'':'s'}</div>
     </div>`).join(''):'<div class="empty">Sin datos para este período.</div>';
 };
 
@@ -1397,7 +1401,7 @@ window.exportarExcel=function(){
   });
   const ws1=XLSX.utils.aoa_to_sheet(stockRows);
   ws1['!cols']=[{wch:20},{wch:26},{wch:10},{wch:10},{wch:10},{wch:12},{wch:14},{wch:14}];
-  XLSX.utils.book_append_sheet(wb,ws1,'Stock');
+  XLSX.utils.book_append_sheet(wb,ws1,'Inventario');
   // Historial
   const logRows=[['Fecha','Tipo','Insumo','Cantidad','Unidad','Responsable / Proveedor','Área','Motivo / Estado','Factura','Vencimiento','Observación']];
   Object.values(logData).sort((a,b)=>b.ts-a.ts).forEach(r=>{
@@ -1406,6 +1410,19 @@ window.exportarExcel=function(){
   const ws2=XLSX.utils.aoa_to_sheet(logRows);
   ws2['!cols']=[{wch:18},{wch:12},{wch:24},{wch:10},{wch:10},{wch:22},{wch:16},{wch:20},{wch:14},{wch:14},{wch:24}];
   XLSX.utils.book_append_sheet(wb,ws2,'Historial');
+  // Consumo mensual (total por insumo, del mes seleccionado en la pantalla de Consumo mensual)
+  const mesSel=document.getElementById('consumo-mes')?.value||mesKey();
+  const areaFiltroSel=document.getElementById('consumo-area')?.value||'';
+  const salidasMes=Object.values(logData).filter(r=>r.tipo==='salida'&&r.mes===mesSel&&(!areaFiltroSel||r.areaId===areaFiltroSel||r.areaNombre===areas[areaFiltroSel]?.nombre));
+  const totalesMes={};
+  salidasMes.forEach(r=>{ if(!totalesMes[r.itemNombre]) totalesMes[r.itemNombre]={qty:0,unidad:r.unidad}; totalesMes[r.itemNombre].qty+=r.qty; });
+  const consumoRows=[[`Consumo del mes: ${mesSel}`],['Insumo','Cantidad total','Unidad']];
+  Object.entries(totalesMes).sort((a,b)=>b[1].qty-a[1].qty).forEach(([nombre,d])=>{
+    consumoRows.push([nombre,+d.qty.toFixed(3),d.unidad||'u']);
+  });
+  const ws3=XLSX.utils.aoa_to_sheet(consumoRows);
+  ws3['!cols']=[{wch:28},{wch:16},{wch:10}];
+  XLSX.utils.book_append_sheet(wb,ws3,'Consumo mensual');
   const fecha=new Date().toLocaleDateString('es-EC').replace(/\//g,'-');
   XLSX.writeFile(wb,`Insumos_Limpieza_${fecha}.xlsx`);
   showToast('✓ Excel descargado.');
