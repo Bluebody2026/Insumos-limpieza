@@ -534,11 +534,16 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);box-shadow:0 0 0
                 <div class="form-group" style="max-width:100px"><label>Stock inicial</label><input type="number" id="new-stock" value="10" min="0" step="0.1"></div>
                 <div class="form-group" style="max-width:100px"><label>Stock mínimo</label><input type="number" id="new-minimo" value="3" min="0" step="0.1"></div>
                 <div class="form-group" style="max-width:110px"><label>Unidad</label>
-                  <select id="new-unidad"><option>unidades</option><option>litros</option><option>galones</option><option>kg</option><option>rollos</option><option>fundas</option><option>cajas</option><option>bolsas</option></select>
+                  <select id="new-unidad"><option>unidades</option><option>litros</option><option>galones</option><option>kg</option><option>rollos</option><option>fundas</option><option>paquetes</option><option>cajas</option><option>bolsas</option></select>
                 </div>
                 <div class="form-group"><label>Categoría</label><select id="new-cat-art"><option value="">Sin categoría</option></select></div>
                 <div class="form-group" style="max-width:130px"><label>&nbsp;</label><button class="btn-primary btn-blue" style="padding:9px;" onclick="agregarArticulo()">+ Agregar</button></div>
               </div>
+            </div>
+            <div class="add-form" style="background:#ECFDF5;border-color:#16A34A;">
+              <div class="add-form-title" style="color:#166534;">🔧 Normalizar unidades y decimales</div>
+              <div style="font-size:13px;color:#166534;margin-bottom:8px;">Unifica la unidad de papel, toallas y fundas (rollos / paquetes / fundas) y redondea al entero más cercano los insumos que se cuentan en unidades. Antes de aplicar te muestra la lista de cambios y puedes cancelar. <b>Descarga el Excel antes como respaldo.</b></div>
+              <button class="btn-primary btn-green" style="padding:9px;" onclick="normalizarInsumos()">Revisar y aplicar cambios</button>
             </div>
             <div class="card"><div class="card-head" id="art-head">Insumos registrados</div><div id="art-list"><div class="empty">Cargando...</div></div></div>
           </div>
@@ -932,13 +937,13 @@ function renderDashboard(){
       const pct=a.total>0?Math.round(disp/a.total*100):0;
       const c=pct>30?'#16A34A':pct>10?'#D97706':'#DC2626';
       const isLow=(a.total-a.enUso)<=a.minimo;
-      html+=`<div class="art-row"><div class="art-name">${a.nombre}${isLow?'<span class="low-badge">Stock bajo</span>':''}</div><div class="art-bar-bg"><div class="art-bar-fill" style="width:${pct}%;background:${c}"></div></div><div class="art-nums" style="color:${c};font-weight:700;min-width:auto;">${formatCantidad(disp,a.unidad)}</div></div>`;
+      html+=`<div class="art-row"><div class="art-name">${a.nombre}${isLow?'<span class="low-badge">Stock bajo</span>':''}</div><div class="art-bar-bg"><div class="art-bar-fill" style="width:${pct}%;background:${c}"></div></div><div class="art-nums" style="color:${c};font-weight:700;min-width:auto;">${formatCantidad(disp,a.unidad,a.nombre)}</div></div>`;
     });
     html+='</div>';
   });
   if(groups['__none__']?.length){
     html+=`<div class="cat-card"><div class="cat-head"><div class="cat-dot" style="background:#9CA3AF"></div><div class="cat-name">Sin categoría</div><div class="cat-count">${groups['__none__'].length}</div></div>`;
-    groups['__none__'].forEach(a=>{ const disp=+(a.total-a.enUso).toFixed(2); const pct=a.total>0?Math.round(disp/a.total*100):0; const c=pct>30?'#16A34A':pct>10?'#D97706':'#DC2626'; html+=`<div class="art-row"><div class="art-name">${a.nombre}</div><div class="art-bar-bg"><div class="art-bar-fill" style="width:${pct}%;background:${c}"></div></div><div class="art-nums" style="color:${c};font-weight:700;min-width:auto;">${formatCantidad(disp,a.unidad)}</div></div>`; });
+    groups['__none__'].forEach(a=>{ const disp=+(a.total-a.enUso).toFixed(2); const pct=a.total>0?Math.round(disp/a.total*100):0; const c=pct>30?'#16A34A':pct>10?'#D97706':'#DC2626'; html+=`<div class="art-row"><div class="art-name">${a.nombre}</div><div class="art-bar-bg"><div class="art-bar-fill" style="width:${pct}%;background:${c}"></div></div><div class="art-nums" style="color:${c};font-weight:700;min-width:auto;">${formatCantidad(disp,a.unidad,a.nombre)}</div></div>`; });
     html+='</div>';
   }
   document.getElementById('cat-grid').innerHTML=html||'<div class="empty">Sin insumos registrados.</div>';
@@ -974,14 +979,15 @@ window.registrarSalida=async function(){
   if(!areaId) return showToast('Selecciona el área de destino.','err');
   if(!motivoId) return showToast('Selecciona el motivo.','err');
   const a=arts[itemId]; const disp=+(a.total-a.enUso).toFixed(2);
-  const qty=aUnidadBase(qtyIngresada,a.unidad,modoUnidad);
+  const qty=aUnidadBase(qtyIngresada,a.unidad,modoUnidad,a.nombre);
+  if(!validarEntero(a,qty)) return;
   if(qty>disp) return showToast(`Solo hay ${formatCantidad(disp,a.unidad)} disponibles.`,'err');
   const btn=document.getElementById('btn-salida'); btn.disabled=true; btn.innerHTML=spinHtml+'Guardando...';
   try{
     await update(ref(db,`ins/arts/${itemId}`),{enUso:+(a.enUso+qty).toFixed(3)});
     const area=areas[areaId]; const motivo=motivos[motivoId];
     await push(ref(db,'ins/log'),{tipo:'salida',itemId,itemNombre:a.nombre,qty,unidad:a.unidad||'u',resp,areaNombre:area?.nombre||'',motivoNombre:motivo?.nombre||'',obs,fecha:now(),ts:Date.now(),mes:mesKey()});
-    showToast(`✓ Salida registrada: ${formatCantidad(qty,a.unidad)}.`);
+    showToast(`✓ Salida registrada: ${formatCantidad(qty,a.unidad,a.nombre)}.`);
     ['s-item','s-resp','s-obs'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('s-qty').value=1;
     actualizarSelectorUnidad('s-item','s-unit');
@@ -1000,12 +1006,13 @@ window.registrarEntrada=async function(){
   if(!qty||qty<=0) return showToast('Ingresa una cantidad válida.','err');
   if(!resp) return showToast('Ingresa el nombre del responsable.','err');
   const a=arts[itemId];
-  const qtyBase=aUnidadBase(qty,a.unidad,document.getElementById('e-unit').value);
+  const qtyBase=aUnidadBase(qty,a.unidad,document.getElementById('e-unit').value,a.nombre);
+  if(!validarEntero(a,qtyBase)) return;
   const btn=document.getElementById('btn-entrada'); btn.disabled=true; btn.innerHTML=spinHtml+'Guardando...';
   try{
     await update(ref(db,`ins/arts/${itemId}`),{enUso:Math.max(0,+(a.enUso-qtyBase).toFixed(3))});
     await push(ref(db,'ins/log'),{tipo:'entrada',itemId,itemNombre:a.nombre,qty:qtyBase,unidad:a.unidad||'u',resp,estado,obs,fecha:now(),ts:Date.now(),mes:mesKey()});
-    showToast(`✓ Entrada registrada: ${formatCantidad(qtyBase,a.unidad)}.`);
+    showToast(`✓ Entrada registrada: ${formatCantidad(qtyBase,a.unidad,a.nombre)}.`);
     ['e-item','e-resp','e-obs'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('e-qty').value=1;
     actualizarSelectorUnidad('e-item','e-unit');
@@ -1025,12 +1032,13 @@ window.registrarCompra=async function(){
   if(!qty||qty<=0) return showToast('Ingresa una cantidad válida.','err');
   if(!proveedor) return showToast('Ingresa el nombre del proveedor.','err');
   const a=arts[itemId];
-  const qtyBase=aUnidadBase(qty,a.unidad,document.getElementById('c-unit').value);
+  const qtyBase=aUnidadBase(qty,a.unidad,document.getElementById('c-unit').value,a.nombre);
+  if(!validarEntero(a,qtyBase)) return;
   const btn=document.getElementById('btn-compra'); btn.disabled=true; btn.innerHTML=spinHtml+'Guardando...';
   try{
     await update(ref(db,`ins/arts/${itemId}`),{total:+(a.total+qtyBase).toFixed(3)});
     await push(ref(db,'ins/log'),{tipo:'compra',itemId,itemNombre:a.nombre,qty:qtyBase,unidad:a.unidad||'u',proveedor,factura,caducidad,obs,fecha:now(),ts:Date.now(),mes:mesKey()});
-    showToast(`✓ Ingreso registrado: ${formatCantidad(qtyBase,a.unidad)}.`);
+    showToast(`✓ Ingreso registrado: ${formatCantidad(qtyBase,a.unidad,a.nombre)}.`);
     ['c-item','c-proveedor','c-factura','c-caducidad','c-obs'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('c-qty').value=1;
     actualizarSelectorUnidad('c-item','c-unit');
@@ -1053,7 +1061,8 @@ window.registrarTraslado=async function(){
   if(!punto||!punto.root) return showToast('Ese punto ya no está disponible.','err');
   const DESTINO_ROOT=punto.root, DESTINO_NOMBRE=punto.nombre;
   const a=arts[itemId]; const disp=+(a.total-a.enUso).toFixed(2);
-  const qty=aUnidadBase(qtyIngresada,a.unidad,document.getElementById('t-unit').value);
+  const qty=aUnidadBase(qtyIngresada,a.unidad,document.getElementById('t-unit').value,a.nombre);
+  if(!validarEntero(a,qty)) return;
   if(qty>disp) return showToast(`Solo hay ${formatCantidad(disp,a.unidad)} disponibles.`,'err');
 
   const btn=document.getElementById('btn-traslado'); btn.disabled=true; btn.innerHTML=spinHtml+'Enviando...';
@@ -1097,7 +1106,7 @@ window.registrarTraslado=async function(){
 
     // 4. Guardar todo en una sola operación atómica (ambas bodegas se actualizan juntas o ninguna)
     await update(ref(db),updates);
-    showToast(`✓ ${formatCantidad(qty,a.unidad)} de ${a.nombre} enviado(s) a ${DESTINO_NOMBRE}.`);
+    showToast(`✓ ${formatCantidad(qty,a.unidad,a.nombre)} de ${a.nombre} enviado(s) a ${DESTINO_NOMBRE}.`);
     ['t-destino','t-item','t-resp','t-obs'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('t-qty').value=1;
     actualizarSelectorUnidad('t-item','t-unit');
@@ -1175,7 +1184,7 @@ window.renderArticulos=function(){
       <div class="art-item-dot" style="background:${cat?.color||'#9CA3AF'}"></div>
       <div class="art-item-info">
         <div class="art-item-name">${a.nombre}${isLow?'<span class="low-badge">Stock bajo</span>':''}</div>
-        <div class="art-item-meta">${cat?.nombre||'Sin cat.'} · Total: ${formatCantidad(a.total,a.unidad)} · En uso: ${formatCantidad(a.enUso,a.unidad)} · Disp: <b style="color:${isLow?'var(--red)':'var(--green)'}">${formatCantidad(disp,a.unidad)}</b> · Mín: ${formatCantidad(a.minimo,a.unidad)}</div>
+        <div class="art-item-meta">${cat?.nombre||'Sin cat.'} · Total: ${formatCantidad(a.total,a.unidad,a.nombre)} · En uso: ${formatCantidad(a.enUso,a.unidad)} · Disp: <b style="color:${isLow?'var(--red)':'var(--green)'}">${formatCantidad(disp,a.unidad,a.nombre)}</b> · Mín: ${formatCantidad(a.minimo,a.unidad)}</div>
       </div>
       <button class="btn-sm btn-edit" onclick="editArt('${k}')">Editar</button>
       <button class="btn-sm btn-del" onclick="delArt('${k}')">Eliminar</button>
@@ -1186,11 +1195,11 @@ window.renderArticulos=function(){
 window.editArt=function(k){
   const a=arts[k];
   const catOpts=Object.entries(cats).map(([ck,c])=>`<option value="${ck}"${a.catId===ck?' selected':''}>${c.nombre}</option>`).join('');
-  const unitOpts=['unidades','litros','galones','kg','rollos','fundas','cajas','bolsas'].map(u=>`<option${a.unidad===u?' selected':''}>${u}</option>`).join('');
+  const unitOpts=['unidades','litros','galones','kg','rollos','fundas','paquetes','cajas','bolsas'].map(u=>`<option${a.unidad===u?' selected':''}>${u}</option>`).join('');
   document.getElementById('art-'+k).innerHTML=`
     <div style="display:flex;gap:6px;flex-wrap:wrap;width:100%;align-items:center;">
       <input type="text" id="en-${k}" value="${a.nombre}" style="flex:1;min-width:120px;">
-      <input type="number" id="es-${k}" value="${a.total}" min="${a.enUso}" step="0.1" style="width:75px;" placeholder="Total">
+      <input type="number" id="es-${k}" value="${a.total}" min="${a.enUso}" step="${soloEnteros(a)?1:0.1}" style="width:75px;" placeholder="Total">
       <input type="number" id="em-${k}" value="${a.minimo}" min="0" step="0.1" style="width:70px;" placeholder="Mín">
       <select id="eu-${k}" style="width:100px;">${unitOpts}</select>
       <select id="ec-${k}" style="width:130px;"><option value="">Sin categoría</option>${catOpts}</select>
@@ -1206,6 +1215,7 @@ window.saveArt=async function(k){
   const unidad=document.getElementById('eu-'+k).value;
   const catId=document.getElementById('ec-'+k).value;
   if(!nombre) return showToast('El nombre no puede estar vacío.','err');
+  if(soloEnteros({unidad})&&Math.abs(total-Math.round(total))>1e-9) return showToast(`Este insumo se cuenta en ${unidad}: el total no puede tener decimales.`,'err');
   await update(ref(db,`ins/arts/${k}`),{nombre,total,minimo,unidad,catId});
   showToast('✓ Insumo actualizado.');
 };
@@ -1222,6 +1232,7 @@ window.agregarArticulo=async function(){
   const unidad=document.getElementById('new-unidad').value;
   const catId=document.getElementById('new-cat-art').value;
   if(!nombre) return showToast('Ingresa el nombre del insumo.','err');
+  if(soloEnteros({unidad})&&Math.abs(total-Math.round(total))>1e-9) return showToast(`Este insumo se cuenta en ${unidad}: el stock inicial no puede tener decimales.`,'err');
   await push(ref(db,'ins/arts'),{nombre,total,enUso:0,minimo,unidad,catId});
   showToast('✓ Insumo agregado.');
   document.getElementById('new-nombre').value='';
@@ -1554,32 +1565,96 @@ window.selectColor=function(el){
   el.classList.add('selected'); selColor=el.dataset.color;
 };
 
+// ── NORMALIZAR UNIDADES Y DECIMALES (solo administrador, con vista previa) ─────
+window.normalizarInsumos=async function(){
+  if(!isAdmin) return showToast('Inicia sesión de administrador.','err');
+  const RAIZ=typeof MI_ROOT!=='undefined'?MI_ROOT:'ins';
+  const upd={}; const lineas=[]; let n=0;
+  Object.entries(arts).forEach(([k,a])=>{
+    const eq=equivDe(a); let unidad=a.unidad; const cambios=[];
+    if(eq&&_norm(a.unidad)!==eq.unidadSug){ unidad=eq.unidadSug; upd[`${RAIZ}/arts/${k}/unidad`]=unidad; cambios.push(`unidad: ${a.unidad||'-'} → ${unidad}`); }
+    if(soloEnteros({unidad})){
+      let total=Math.round(+a.total||0), enUso=Math.round(+a.enUso||0); if(enUso>total) enUso=total;
+      if(total!==a.total){ upd[`${RAIZ}/arts/${k}/total`]=total; cambios.push(`total: ${a.total} → ${total}`); }
+      if(enUso!==a.enUso){ upd[`${RAIZ}/arts/${k}/enUso`]=enUso; cambios.push(`en uso: ${a.enUso} → ${enUso}`); }
+    }
+    if(cambios.length){ n++; lineas.push(`• ${a.nombre}: ${cambios.join('; ')}`); }
+  });
+  if(!n) return showToast('No hay nada que normalizar.');
+  const vista=lineas.slice(0,25).join('\n')+(lineas.length>25?`\n… y ${lineas.length-25} más`:'');
+  if(!confirm(`Se modificarán ${n} insumo(s):\n\n${vista}\n\n¿Aplicar estos cambios?`)) return;
+  try{ await update(ref(db),upd); showToast(`✓ ${n} insumo(s) normalizados.`); }
+  catch(e){ console.error(e); showToast('Error al aplicar los cambios.','err'); }
+};
+
 // ── EXCEL ──────────────────────────────────────────────────────────────────────
 window.exportarExcel=function(){
   const wb=XLSX.utils.book_new();
-  // Stock
-  const stockRows=[['Categoría','Insumo','Unidad','Total','En uso','Disponible','Stock mínimo','Estado']];
-  Object.entries(cats).forEach(([cid,cat])=>{
-    Object.entries(arts).filter(([k,a])=>a.catId===cid).forEach(([k,a])=>{
-      const disp=+(a.total-a.enUso).toFixed(2);
-      stockRows.push([cat.nombre,a.nombre,a.unidad||'u',a.total,a.enUso,disp,a.minimo,disp<=a.minimo?'⚠ Stock bajo':'OK']);
-    });
-  });
-  Object.entries(arts).filter(([k,a])=>!a.catId).forEach(([k,a])=>{
+  // Stock (con equivalencias en sacos/pacas y paquetes cuando aplica)
+  const stockRows=[['Categoría','Insumo','Unidad','Total','En uso','Disponible','Stock mínimo','Estado','Total en sacos/pacas','Total en paquetes','Disponible en sacos/pacas','Disponible en paquetes','Disponible (desglose)']];
+  const filaStock=(catNombre,a)=>{
     const disp=+(a.total-a.enUso).toFixed(2);
-    stockRows.push(['Sin categoría',a.nombre,a.unidad||'u',a.total,a.enUso,disp,a.minimo,disp<=a.minimo?'⚠ Stock bajo':'OK']);
+    const et=equivCols(a.total,a), ed=equivCols(disp,a);
+    stockRows.push([catNombre,a.nombre,a.unidad||'u',a.total,a.enUso,disp,a.minimo,disp<=a.minimo?'⚠ Stock bajo':'OK',et[0],et[1],ed[0],ed[1],ed[2]]);
+  };
+  Object.entries(cats).forEach(([cid,cat])=>{
+    Object.entries(arts).filter(([k,a])=>a.catId===cid).forEach(([k,a])=>filaStock(cat.nombre,a));
   });
+  Object.entries(arts).filter(([k,a])=>!a.catId).forEach(([k,a])=>filaStock('Sin categoría',a));
   const ws1=XLSX.utils.aoa_to_sheet(stockRows);
-  ws1['!cols']=[{wch:20},{wch:26},{wch:10},{wch:10},{wch:10},{wch:12},{wch:14},{wch:14}];
-  XLSX.utils.book_append_sheet(wb,ws1,'Stock');
+  ws1['!cols']=[{wch:20},{wch:26},{wch:10},{wch:10},{wch:10},{wch:12},{wch:14},{wch:14},{wch:18},{wch:16},{wch:22},{wch:20},{wch:34}];
+  XLSX.utils.book_append_sheet(wb,ws1,'Inventario');
   // Historial
-  const logRows=[['Fecha','Tipo','Insumo','Cantidad','Unidad','Responsable / Proveedor','Área','Motivo / Estado','Factura','Vencimiento','Observación']];
+  const logRows=[['Fecha','Tipo','Insumo','Cantidad','Unidad','Responsable / Proveedor','Área','Motivo / Estado','Factura','Vencimiento','Observación','Cantidad (desglose)']];
   Object.values(logData).sort((a,b)=>b.ts-a.ts).forEach(r=>{
-    logRows.push([r.fecha,r.tipo==='salida'?'Salida':r.tipo==='compra'?'Compra':r.tipo==='traslado'?'Transferencia enviada':r.tipo==='devolucion_recibida'?'Devolución recibida':'Entrada',r.itemNombre,r.qty,r.unidad||'',r.resp||r.proveedor||'',r.areaNombre||'',r.motivoNombre||r.estado||'',r.factura||'',r.caducidad||'',r.obs||'']);
+    logRows.push([r.fecha,r.tipo==='salida'?'Salida':r.tipo==='compra'?'Compra':'Devolución',r.itemNombre,r.qty,r.unidad||'',r.resp||r.proveedor||'',r.areaNombre||'',r.motivoNombre||r.estado||'',r.factura||'',r.caducidad||'',r.obs||'',desglose(r.qty,{nombre:r.itemNombre,unidad:(arts[r.itemId]&&arts[r.itemId].unidad)||r.unidad},true)]);
   });
   const ws2=XLSX.utils.aoa_to_sheet(logRows);
-  ws2['!cols']=[{wch:18},{wch:12},{wch:24},{wch:10},{wch:10},{wch:22},{wch:16},{wch:20},{wch:14},{wch:14},{wch:24}];
+  ws2['!cols']=[{wch:18},{wch:12},{wch:24},{wch:10},{wch:10},{wch:22},{wch:16},{wch:20},{wch:14},{wch:14},{wch:24},{wch:30}];
   XLSX.utils.book_append_sheet(wb,ws2,'Historial');
+  // Consumo mensual (total por insumo, del mes seleccionado en la pantalla de Consumo mensual)
+  const mesSel=document.getElementById('consumo-mes')?.value||mesKey();
+  const areaFiltroSel=document.getElementById('consumo-area')?.value||'';
+  const salidasMes=Object.values(logData).filter(r=>r.tipo==='salida'&&r.mes===mesSel&&(!areaFiltroSel||r.areaId===areaFiltroSel||r.areaNombre===areas[areaFiltroSel]?.nombre));
+  const totalesMes={};
+  salidasMes.forEach(r=>{ if(!totalesMes[r.itemNombre]) totalesMes[r.itemNombre]={qty:0,unidad:r.unidad}; totalesMes[r.itemNombre].qty+=r.qty; });
+  const unidadActual=(nombre,fallback)=>{ const x=Object.values(arts).find(a=>(a.nombre||'')===nombre); return (x&&x.unidad)||fallback||'u'; };
+  const consumoRows=[[`Consumo del mes: ${mesSel}`],['Insumo','Cantidad total','Unidad','Sacos/Pacas','Paquetes','Desglose']];
+  Object.entries(totalesMes).sort((a,b)=>b[1].qty-a[1].qty).forEach(([nombre,d])=>{
+    const u=unidadActual(nombre,d.unidad); const ec=equivCols(d.qty,{nombre,unidad:u});
+    consumoRows.push([nombre,+d.qty.toFixed(3),u,ec[0],ec[1],ec[2]]);
+  });
+  const ws3=XLSX.utils.aoa_to_sheet(consumoRows);
+  ws3['!cols']=[{wch:28},{wch:16},{wch:10},{wch:14},{wch:12},{wch:34}];
+  XLSX.utils.book_append_sheet(wb,ws3,'Consumo mensual');
+  // Insumos entregados por área (todas las áreas, del mes seleccionado) + total global
+  const entregasMes=Object.values(logData).filter(r=>r.tipo==='salida'&&r.mes===mesSel);
+  const porArea={}, global={};
+  entregasMes.forEach(r=>{
+    const an=((r.areaNombre||'').toString().trim()||'SIN ÁREA');
+    if(!porArea[an]) porArea[an]={};
+    if(!porArea[an][r.itemNombre]) porArea[an][r.itemNombre]={qty:0,unidad:r.unidad};
+    porArea[an][r.itemNombre].qty+=r.qty;
+    if(!global[r.itemNombre]) global[r.itemNombre]={qty:0,unidad:r.unidad};
+    global[r.itemNombre].qty+=r.qty;
+  });
+  const COLS_AREA=['Insumo','Cantidad','Unidad','Sacos/Pacas','Paquetes','Desglose'];
+  const filaItem=(nombre,d)=>{ const u=unidadActual(nombre,d.unidad); const ec=equivCols(d.qty,{nombre,unidad:u}); return [nombre,+d.qty.toFixed(3),u,ec[0],ec[1],ec[2]]; };
+  const porAreaRows=[[`INSUMOS ENTREGADOS POR ÁREA — ${mesSel}`],[]];
+  const nombresAreas=Object.keys(porArea).sort((x,y)=>x.localeCompare(y,'es'));
+  if(!nombresAreas.length) porAreaRows.push(['Sin salidas registradas en este mes.']);
+  nombresAreas.forEach(an=>{
+    porAreaRows.push([an.toUpperCase()]); porAreaRows.push(COLS_AREA);
+    Object.keys(porArea[an]).sort((x,y)=>x.localeCompare(y,'es')).forEach(n=>porAreaRows.push(filaItem(n,porArea[an][n])));
+    porAreaRows.push([]);
+  });
+  if(nombresAreas.length){
+    porAreaRows.push(['TOTAL GLOBAL (todas las áreas)']); porAreaRows.push(COLS_AREA);
+    Object.keys(global).sort((x,y)=>x.localeCompare(y,'es')).forEach(n=>porAreaRows.push(filaItem(n,global[n])));
+  }
+  const ws4=XLSX.utils.aoa_to_sheet(porAreaRows);
+  ws4['!cols']=[{wch:34},{wch:12},{wch:10},{wch:14},{wch:12},{wch:34}];
+  XLSX.utils.book_append_sheet(wb,ws4,'Insumos por área');
   const fecha=new Date().toLocaleDateString('es-EC').replace(/\//g,'-');
   XLSX.writeFile(wb,`Insumos_Limpieza_${fecha}.xlsx`);
   showToast('✓ Excel descargado.');
@@ -1594,18 +1669,63 @@ const UNIT_SUB={
 };
 function unitInfo(unidad){ return UNIT_SUB[(unidad||'').trim().toLowerCase()]||null; }
 
-// Convierte una cantidad ingresada en la subunidad (ej. ml) a la unidad base (ej. litros)
-function aUnidadBase(valor,unidad,modo){
+// ── EQUIVALENCIAS: saco/paca > paquete > unidad (se reconocen por el nombre del insumo) ──
+function _norm(s){ return (s||'').toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ').trim(); }
+const EQUIV_REGLAS=[
+  {re:/papel higienico.*250/,                 saco:{n:'paca',f:144},  paq:{n:'paquete',f:12}, unidadSug:'rollos'},   // 12 paquetes x 12 rollos
+  {re:/center ?pull|pull ?center/,            saco:{n:'paca',f:144},  paq:{n:'paquete',f:12}, unidadSug:'rollos'},   // 12 paquetes x 12 rollos
+  {re:/toallas? z\b/,                        saco:{n:'paca',f:30},   paq:null,               unidadSug:'paquetes'}, // 1 paca = 30 paquetes
+  {re:/funda.*18 ?x ?23/,                     saco:{n:'saco',f:2000}, paq:{n:'paquete',f:10}, unidadSug:'fundas'},   // 200 paquetes x 10
+  {re:/funda.*23 ?x ?28/,                     saco:{n:'saco',f:1500}, paq:{n:'paquete',f:10}, unidadSug:'fundas'},   // 150 paquetes x 10
+  {re:/funda.*30 ?x ?36/,                     saco:{n:'saco',f:1000}, paq:{n:'paquete',f:10}, unidadSug:'fundas'},   // 100 paquetes x 10
+  {re:/funda.*(35 ?x ?45|35 ?x ?47|36 ?x ?47)/, saco:{n:'saco',f:400},  paq:{n:'paquete',f:10}, unidadSug:'fundas'}, // 40 paquetes x 10
+];
+function equivDe(a){ const n=_norm(typeof a==='string'?a:(a&&a.nombre)); if(!n) return null; return EQUIV_REGLAS.find(r=>r.re.test(n))||null; }
+const UNIDADES_ENTERAS=['unidades','unidad','rollos','fundas','cajas','bolsas','paquetes','u'];
+function soloEnteros(a){ return !!a && UNIDADES_ENTERAS.includes(_norm(a.unidad)); }
+function _plural(n,c){ return n+(c===1?'':'s'); }
+function desglose(qty,a,soloSiHay){
+  const eq=equivDe(a); if(!eq) return '';
+  let q=Math.round(+qty||0); const u=(a&&a.unidad)||'u'; const partes=[];
+  const s=Math.floor(q/eq.saco.f); q-=s*eq.saco.f;
+  let p=0; if(eq.paq){ p=Math.floor(q/eq.paq.f); q-=p*eq.paq.f; }
+  if(soloSiHay&&!s&&!p) return '';
+  if(s) partes.push(`${s} ${_plural(eq.saco.n,s)}`);
+  if(p) partes.push(`${p} ${_plural(eq.paq.n,p)}`);
+  if(q||!partes.length) partes.push(`${q} ${u}`);
+  return partes.length>1?partes.slice(0,-1).join(', ')+' y '+partes[partes.length-1]:partes[0];
+}
+// Columnas para Excel: [sacos/pacas, paquetes, desglose]
+function equivCols(qty,a){
+  const eq=equivDe(a); if(!eq) return ['','',''];
+  return [+((+qty||0)/eq.saco.f).toFixed(2), eq.paq?+((+qty||0)/eq.paq.f).toFixed(2):'', desglose(qty,a)];
+}
+function validarEntero(a,qtyBase){
+  if(soloEnteros(a)&&Math.abs(qtyBase-Math.round(qtyBase))>1e-9){
+    showToast(`"${a.nombre}" se cuenta en ${a.unidad}: no se permiten decimales.`,'err'); return false;
+  }
+  return true;
+}
+
+function aUnidadBase(valor,unidad,modo,nombre){
+  if(modo==='saco'||modo==='paq'){
+    const eq=equivDe(nombre);
+    if(eq){ const f=modo==='saco'?eq.saco.f:(eq.paq?eq.paq.f:1); return Math.round(valor*f*1000)/1000; }
+    return valor;
+  }
   const info=unitInfo(unidad);
   if(!info||modo!=='sub') return valor;
   return Math.round((valor/info.factor)*1000)/1000;
 }
 
-// Da formato legible mixto: "19 litros y 750 ml" / "250 ml" / "8 unidades"
-function formatCantidad(qty,unidad){
+function formatCantidad(qty,unidad,nombre){
   const info=unitInfo(unidad);
   const u=unidad||'u';
-  if(!info) return `${+(+qty).toFixed(2)} ${u}`;
+  if(!info){
+    let t=`${+(+qty).toFixed(2)} ${u}`;
+    if(nombre){ const d=desglose(qty,{nombre,unidad},true); if(d) t+=` (${d})`; }
+    return t;
+  }
   const q=Math.round(qty*info.factor)/info.factor;
   const whole=Math.floor(q+1e-9);
   let sub=Math.round((q-whole)*info.factor);
@@ -1615,17 +1735,35 @@ function formatCantidad(qty,unidad){
   return `${whole} ${u} y ${sub} ${info.sub}`;
 }
 
-// Rellena el selector de unidad/subunidad junto a un campo de cantidad, según el insumo elegido
 function actualizarSelectorUnidad(selectItemId,selectUnitId){
   const itemSel=document.getElementById(selectItemId);
   const unitSel=document.getElementById(selectUnitId);
   if(!itemSel||!unitSel) return;
+  const qtyInp=document.getElementById(selectItemId.replace('-item','-qty'));
   const a=arts[itemSel.value];
   const info=a?unitInfo(a.unidad):null;
-  if(!info){ unitSel.style.display='none'; unitSel.innerHTML=''; return; }
-  unitSel.innerHTML=`<option value="base">${a.unidad}</option><option value="sub">${info.sub}</option>`;
+  const eq=a?equivDe(a):null;
+  const opts=[];
+  if(info){ opts.push(['base',a.unidad],['sub',info.sub]); }
+  else if(eq){
+    opts.push(['base',a.unidad||'unidades']);
+    if(eq.paq) opts.push(['paq',_plural(eq.paq.n,2)]);
+    opts.push(['saco',_plural(eq.saco.n,2)]);
+  }
+  const ajustarPaso=()=>{
+    if(!qtyInp) return;
+    const entero=soloEnteros(a); const modo=unitSel.value||'base';
+    if(entero&&modo==='base'){ qtyInp.step='1'; qtyInp.min='1'; }
+    else { qtyInp.step=entero?'any':'0.01'; qtyInp.min='0.01'; }
+  };
+  unitSel.onchange=ajustarPaso;
+  if(!opts.length){ unitSel.style.display='none'; unitSel.innerHTML=''; ajustarPaso(); return; }
+  unitSel.innerHTML=opts.map(([v,t])=>`<option value="${v}">${t}</option>`).join('');
   unitSel.style.display='';
+  ajustarPaso();
 }
+
+window.actualizarSelectorUnidad=actualizarSelectorUnidad;
 
 function now(){ return new Date().toLocaleString('es-EC',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
 
